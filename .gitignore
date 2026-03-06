@@ -1,3 +1,15 @@
 .DS_Store
-node_modules/
 .env
+
+# root
+node_modules/
+
+# app
+web/node_modules/
+web/.next/
+web/out/
+web/.turbo/
+
+# local data (keep layout, not contents)
+data/*.db
+data/**/*.db
