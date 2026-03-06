@@ -8,12 +8,14 @@ export const dynamic = 'force-dynamic';
 const EXTRACTOR_VERSION = 'v0-heuristic-2026-03-06';
 
 function requireJobSecret(req: Request) {
-  const configured = process.env.JOB_SECRET;
-  if (!configured) return; // allow local dev if not set
+  const configured = process.env.EXTRACT_JOBS_SECRET;
+  if (!configured) {
+    throw new Error('Server misconfigured: missing EXTRACT_JOBS_SECRET');
+  }
 
-  const got = req.headers.get('x-job-secret');
+  const got = req.headers.get('x-jobs-secret');
   if (!got || got !== configured) {
-    throw new Error('Unauthorized: missing/invalid x-job-secret');
+    throw new Error('Unauthorized: missing/invalid x-jobs-secret');
   }
 }
 
@@ -103,6 +105,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, seen, created, skipped, extractorVersion: EXTRACTOR_VERSION });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ ok: false, error: msg }, { status: 401 });
+    const status = msg.startsWith('Unauthorized') ? 401 : msg.startsWith('Server misconfigured') ? 500 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
