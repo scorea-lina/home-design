@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
+export const dynamic = 'force-dynamic';
+
 type InboxItem = {
   id: string;
   subject: string;
@@ -38,13 +40,22 @@ export default async function InboxPage() {
   const supabase = getSupabaseServerClient();
 
   // Source of truth: public.agentmail_messages
-  const { data, error } = await supabase
-    .from('agentmail_messages')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(50);
+  // NOTE: different deployments may not have `created_at` on this table.
+  // To avoid hard failures, fetch without ordering and sort best-effort in JS.
+  const { data, error } = await supabase.from('agentmail_messages').select('*').limit(50);
 
   const rows = (data ?? []) as Record<string, unknown>[];
+
+  // best-effort sort by a timestamp-like column if present
+  const tsKeys = ['received_at', 'date', 'internal_date', 'sent_at', 'inserted_at', 'created_at'];
+  rows.sort((a, b) => {
+    const at = tsKeys.map((k) => a[k]).find((v) => v != null);
+    const bt = tsKeys.map((k) => b[k]).find((v) => v != null);
+    const an = at ? +new Date(String(at)) : 0;
+    const bn = bt ? +new Date(String(bt)) : 0;
+    return bn - an;
+  });
+
   const items = rows.map(toInboxItem).filter((x) => x.id);
 
   return (

@@ -1,5 +1,7 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
+export const dynamic = 'force-dynamic';
+
 function pickText(row: Record<string, unknown>, keys: string[], fallback = '') {
   for (const k of keys) {
     const v = row[k];
