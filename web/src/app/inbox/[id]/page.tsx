@@ -13,12 +13,18 @@ function pickText(row: Record<string, unknown>, keys: string[], fallback = '') {
 export default async function InboxDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
+  // Route param is URL-encoded (often an RFC Message-ID like "<...@...>")
+  const messageId = decodeURIComponent(id);
+
   const supabase = getSupabaseServerClient();
 
+  // NOTE: PostgREST will error if we reference columns that do not exist.
+  // `public.agentmail_messages` columns (per TesterBot):
+  // fetched_at, from, inbox_address, inserted_at, message_id, raw, subject, text, thread_id, to, ts
   const { data, error } = await supabase
     .from('agentmail_messages')
     .select('*')
-    .or(`id.eq.${id},message_id.eq.${id},msg_id.eq.${id},rfc822_message_id.eq.${id}`)
+    .eq('message_id', messageId)
     .limit(1)
     .maybeSingle();
 
@@ -27,9 +33,9 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
   const subject = pickText(row, ['subject', 'message_subject'], '(no subject)');
   const from = pickText(row, ['from_name', 'from', 'from_email', 'sender', 'sender_email', 'mail_from'], '(unknown sender)');
   const to = pickText(row, ['to', 'to_email', 'recipient', 'recipient_email'], '');
-  const dateRaw = row.date ?? row.sent_at ?? row.received_at ?? row.created_at;
+  const dateRaw = row.ts ?? row.received_at ?? row.inserted_at ?? row.fetched_at ?? row.date ?? row.sent_at ?? row.created_at;
   const date = dateRaw ? new Date(String(dateRaw)).toLocaleString() : '';
-  const body = pickText(row, ['body_text', 'text', 'raw_text', 'body', 'snippet'], '(no body)');
+  const body = pickText(row, ['text', 'body_text', 'raw_text', 'body', 'raw', 'snippet'], '(no body)');
 
   return (
     <div className="space-y-6">
