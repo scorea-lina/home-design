@@ -114,10 +114,16 @@ export async function POST(req: Request) {
 
       if (!actionable) {
         skipped++;
-        const { error: insErr } = await supabase.from('agentmail_message_processing').insert({
-          message_id: messageId,
-          extractor_version: EXTRACTOR_VERSION,
-        });
+        const { error: insErr } = await supabase
+          .from('agentmail_message_processing')
+          .upsert(
+            {
+              message_id: messageId,
+              extractor_version: EXTRACTOR_VERSION,
+              processed_at: new Date().toISOString(),
+            },
+            { onConflict: 'message_id' }
+          );
         if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
         continue;
       }
