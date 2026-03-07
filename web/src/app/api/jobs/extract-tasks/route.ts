@@ -61,6 +61,19 @@ export async function POST(req: Request) {
     let skipped = 0;
     let alreadyProcessed = 0;
 
+    const debug: {
+      enabled: boolean;
+      samples: Array<{
+        messageId: string;
+        actionable: boolean;
+        suggestedAreas: string[];
+        suggestedTopics: string[];
+        matchedTagNames: string[];
+        deleteError?: string;
+        insertError?: string;
+      }>;
+    } = { enabled: reprocess, samples: [] };
+
     for (const m of messages) {
       const messageId = String(m.message_id ?? '').trim();
       if (!messageId) continue;
@@ -204,6 +217,7 @@ export async function POST(req: Request) {
           console.warn('tag assignment delete failed', delErr.message);
         }
 
+        let insertErr: string | undefined;
         if (toAssign.length) {
           const rows = toAssign.map((t) => ({
             tag_id: t.id,
@@ -215,8 +229,21 @@ export async function POST(req: Request) {
           const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
           if (tagErr) {
             // non-fatal for MVP; still record processing + task
+            insertErr = tagErr.message;
             console.warn('tag assignment insert failed', tagErr.message);
           }
+        }
+
+        if (debug.enabled && debug.samples.length < 3) {
+          debug.samples.push({
+            messageId,
+            actionable,
+            suggestedAreas: areas,
+            suggestedTopics: topics,
+            matchedTagNames: toAssign.map((t) => t.name),
+            deleteError: delErr?.message,
+            insertError: insertErr,
+          });
         }
       }
 
@@ -244,6 +271,7 @@ export async function POST(req: Request) {
       alreadyProcessed,
       reprocess,
       extractorVersion: EXTRACTOR_VERSION,
+      debug: debug.enabled ? debug : undefined,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
