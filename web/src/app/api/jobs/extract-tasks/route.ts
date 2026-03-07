@@ -103,7 +103,8 @@ export async function POST(req: Request) {
       let topics: string[] = [];
       let confidence: 'auto_high' | 'auto_low' = 'auto_low';
 
-      if (process.env.OPENAI_API_KEY) {
+      const hasOpenAI = !!(process.env.OPENAI_API_KEY || process.env.HOMEDESIGN_OPENAI_API_KEY);
+      if (hasOpenAI) {
         const oa = await extractWithOpenAI({
           subject: String(m.subject ?? ''),
           from: String(m.from ?? ''),
