@@ -1,9 +1,13 @@
-export type OpenAIExtractResult = {
-  actionable: boolean;
-  title?: string;
+export type OpenAITaskItem = {
+  title: string;
   notes?: string;
   areas?: string[];
   topics?: string[];
+};
+
+export type OpenAIExtractResult = {
+  actionable: boolean;
+  tasks: OpenAITaskItem[];
   confidence?: 'high' | 'low';
 };
 
@@ -24,21 +28,26 @@ export async function extractWithOpenAI(input: {
 Return STRICT JSON ONLY (no markdown) with this schema:
 {
   "actionable": boolean,
-  "title": string | null,
-  "notes": string | null,
-  "areas": string[],
-  "topics": string[],
+  "tasks": [
+    {
+      "title": string,
+      "notes": string | null,
+      "areas": string[],
+      "topics": string[]
+    }
+  ],
   "confidence": "high" | "low"
 }
 
 Rules:
-- Only set actionable=true if the email contains a concrete next step/ask/decision needed.
-- Prefer to skip newsletters/marketing/receipts.
-- title: short imperative.
-- notes: 1-3 bullets in plain text (use '\n' between bullets), or null.
-- areas/topics MUST be chosen ONLY from the allowed lists.
-- If actionable=true, choose 1-2 Areas and 1-2 Topics even if low confidence (best guess).
-- If you truly cannot infer, pick the most generic Topic (prefer "Open Questions" or "Decisions") and pick your best-guess Area.
+- Set actionable=false for newsletters, marketing, receipts, automated notifications; return tasks=[].
+- If actionable=true, return ONE task object per distinct action item in the email.
+  - Example: "Notes on utility closet and shower shelf" → two tasks: one for utility closet, one for shower shelf.
+- title: short imperative phrase per task (e.g. "Finalize shower shelf design").
+- notes: 1-3 bullets for that specific action item in plain text (use '\\n' between bullets), or null.
+- areas/topics MUST be chosen ONLY from the allowed lists below.
+- For each task, choose 1-2 Areas and 1-2 Topics even if low confidence (best guess from context).
+- Synonyms: "cabinets" → Kitchen, "shower" → Primary Bath or Secondary Bath, "closet" → Storage/Utility, "budget/quote/invoice/pricing" → Budget topic.
 
 Allowed Areas:
 ${input.allowedAreas.map((x) => `- ${x}`).join('\n')}
@@ -50,7 +59,8 @@ Email:
 Subject: ${input.subject}
 From: ${input.from}
 To: ${input.to}
-Body:\n${input.text}
+Body:
+${input.text}
 `;
 
   const res = await fetch('https://api.openai.com/v1/responses', {
@@ -63,7 +73,7 @@ Body:\n${input.text}
       model: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
       input: prompt,
       temperature: 0.2,
-      max_output_tokens: 400,
+      max_output_tokens: 800,
     }),
   });
 
@@ -93,23 +103,26 @@ Body:\n${input.text}
 
   const p = parsed as Partial<{
     actionable: unknown;
-    title: unknown;
-    notes: unknown;
-    areas: unknown;
-    topics: unknown;
+    tasks: unknown;
     confidence: unknown;
   }>;
 
   const actionable = !!p.actionable;
-  const areas = Array.isArray(p.areas) ? p.areas.filter((x): x is string => typeof x === 'string') : [];
-  const topics = Array.isArray(p.topics) ? p.topics.filter((x): x is string => typeof x === 'string') : [];
+  const rawTasks = Array.isArray(p.tasks) ? p.tasks : [];
+
+  const tasks: OpenAITaskItem[] = rawTasks.map((t) => {
+    const item = t as Partial<{ title: unknown; notes: unknown; areas: unknown; topics: unknown }>;
+    return {
+      title: typeof item.title === 'string' ? item.title.trim() : '',
+      notes: typeof item.notes === 'string' ? item.notes : undefined,
+      areas: Array.isArray(item.areas) ? item.areas.filter((x): x is string => typeof x === 'string') : [],
+      topics: Array.isArray(item.topics) ? item.topics.filter((x): x is string => typeof x === 'string') : [],
+    };
+  }).filter((t) => t.title.length > 0);
 
   return {
     actionable,
-    title: typeof p.title === 'string' ? p.title : undefined,
-    notes: typeof p.notes === 'string' ? p.notes : undefined,
-    areas,
-    topics,
+    tasks,
     confidence: p.confidence === 'high' ? 'high' : 'low',
   };
 }
