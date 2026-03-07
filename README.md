@@ -37,8 +37,36 @@ docker compose up --build
 - `/canvas` and `/canvas/:assetId`
 - `/settings`
 
+## Demo: auto-extract emails → Kanban tasks (Supabase)
+
+1) Create tables in Supabase
+- Open the Supabase SQL editor and run:
+  - `web/supabase/schema_tasks.sql`
+
+2) Set env vars
+```bash
+cd web
+cp .env.example .env.local
+# set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and EXTRACT_JOBS_SECRET
+```
+
+3) Run the app
+```bash
+npm install
+npm run dev
+# open http://localhost:3000/
+```
+
+4) Trigger extraction (idempotent)
+```bash
+curl -X POST http://localhost:3000/api/jobs/extract-tasks \
+  -H "x-jobs-secret: $EXTRACT_JOBS_SECRET"
+```
+
+Then refresh `/` — new cards should appear in **Triage**.
+
 ## Local data
-- SQLite DB default location: `./data/app.db` (repo-root)
+- SQLite DB default location: `./data/app.db` (repo-root) (legacy; used for early scaffold)
 - Blob storage (planned): `./data/blobs/` (repo-root)
 
 > Note: DB files are gitignored; `data/` itself is tracked.
