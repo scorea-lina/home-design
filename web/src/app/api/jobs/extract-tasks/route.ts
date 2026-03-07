@@ -214,12 +214,17 @@ export async function POST(req: Request) {
         }
       }
 
-      const { error: procErr } = await supabase.from('agentmail_message_processing').upsert({
-        message_id: messageId,
-        extractor_version: EXTRACTOR_VERSION,
-        task_id: taskId,
-        processed_at: new Date().toISOString(),
-      });
+      const { error: procErr } = await supabase
+        .from('agentmail_message_processing')
+        .upsert(
+          {
+            message_id: messageId,
+            extractor_version: EXTRACTOR_VERSION,
+            task_id: taskId,
+            processed_at: new Date().toISOString(),
+          },
+          { onConflict: 'message_id' }
+        );
 
       if (procErr) return NextResponse.json({ ok: false, error: procErr.message }, { status: 500 });
     }
