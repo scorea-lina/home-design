@@ -58,7 +58,7 @@ Body:\n${input.text}
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+      model: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
       input: prompt,
       temperature: 0.2,
       max_output_tokens: 400,

@@ -6,7 +6,7 @@ import { extractWithOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 
-const EXTRACTOR_VERSION = 'v0-heuristic-2026-03-06';
+const EXTRACTOR_VERSION = `openai-v0-actionable-${process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'}`;
 
 function requireJobSecret(req: Request) {
   const configured = process.env.EXTRACT_JOBS_SECRET;
