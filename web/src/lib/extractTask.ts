@@ -16,7 +16,7 @@ function looksLikeNewsletter(from: string, subject: string) {
 export type ExtractedTask = {
   title: string;
   notes?: string;
-  status: 'triage' | 'todo' | 'doing' | 'done';
+  status: 'open' | 'done';
   skipReason?: string;
 };
 
@@ -28,7 +28,7 @@ export function extractTaskFromAgentmailMessage(row: Record<string, unknown>): E
   const cleanSubject = stripPrefixes(subject || '(no subject)');
 
   if (looksLikeNewsletter(from, cleanSubject)) {
-    return { title: cleanSubject, status: 'triage', skipReason: 'newsletter-like' };
+    return { title: cleanSubject, status: 'open', skipReason: 'newsletter-like' };
   }
 
   // MVP heuristic: title = subject; notes = first ~3 lines of text
@@ -44,6 +44,6 @@ export function extractTaskFromAgentmailMessage(row: Record<string, unknown>): E
   return {
     title: cleanSubject.slice(0, 120),
     notes,
-    status: 'triage',
+    status: 'open',
   };
 }
