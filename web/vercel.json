@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/jobs/extract-tasks",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
