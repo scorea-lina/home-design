@@ -6,7 +6,7 @@ import { extractWithOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 
-const EXTRACTOR_VERSION = `openai-v0-actionable-${process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'}`;
+const EXTRACTOR_VERSION = `openai-v1-multi-${process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'}`;
 
 function requireJobSecret(req: Request) {
   // Accept Vercel cron bearer token (CRON_SECRET) — Vercel injects this automatically.
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const allowedAreas = tags.filter((t) => t.category === 'area').map((t) => t.name);
     const allowedTopics = tags.filter((t) => t.category === 'topic').map((t) => t.name);
 
-    // Pull latest messages. We avoid ordering by a specific column because schema can vary.
+    // Pull latest messages.
     const { data: msgs, error: msgErr } = await supabase
       .from('agentmail_messages')
       .select('message_id, subject, from, to, text, ts, inserted_at')
@@ -74,11 +74,9 @@ export async function POST(req: Request) {
       samples: Array<{
         messageId: string;
         actionable: boolean;
-        suggestedAreas: string[];
-        suggestedTopics: string[];
-        matchedTagNames: string[];
-        deleteError?: string;
-        insertError?: string;
+        taskCount: number;
+        tasks: Array<{ title: string; suggestedAreas: string[]; suggestedTopics: string[]; matchedTagNames: string[] }>;
+        error?: string;
       }>;
     } = { enabled: reprocess, samples: [] };
 
@@ -90,7 +88,7 @@ export async function POST(req: Request) {
       // idempotency: check processing marker (unless reprocess=1)
       const { data: marker, error: markerErr } = await supabase
         .from('agentmail_message_processing')
-        .select('message_id, task_id')
+        .select('message_id')
         .eq('message_id', messageId)
         .maybeSingle();
 
@@ -102,16 +100,13 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // v0: use OpenAI to decide actionable + extract title/tags.
-      // Keep heuristic as fallback if OpenAI is not configured.
-      let actionable = true;
-      let title = '';
-      let notes: string | undefined;
-      let areas: string[] = [];
-      let topics: string[] = [];
-      let confidence: 'auto_high' | 'auto_low' = 'auto_low';
-
       const hasOpenAI = !!(process.env.OPENAI_API_KEY || process.env.HOMEDESIGN_OPENAI_API_KEY);
+
+      let actionable = true;
+      let confidence: 'auto_high' | 'auto_low' = 'auto_low';
+      type TaskDraft = { title: string; notes?: string; areas: string[]; topics: string[] };
+      let taskDrafts: TaskDraft[] = [];
+
       if (hasOpenAI) {
         const oa = await extractWithOpenAI({
           subject: String(m.subject ?? ''),
@@ -122,167 +117,139 @@ export async function POST(req: Request) {
           allowedTopics,
         });
         actionable = oa.actionable;
-        title = (oa.title ?? '').trim();
-        notes = oa.notes;
-        areas = oa.areas ?? [];
-        topics = oa.topics ?? [];
         confidence = oa.confidence === 'high' ? 'auto_high' : 'auto_low';
 
-        // Demo-friendly guarantee: if actionable, ensure non-empty tags using seeded PRD set.
-        // Prefer generic topics if model returns none.
         if (actionable) {
-          if (topics.length === 0) {
-            if (allowedTopics.includes('Open Questions')) topics = ['Open Questions'];
-            else if (allowedTopics.includes('Decisions')) topics = ['Decisions'];
+          taskDrafts = oa.tasks.map((t) => {
+            const areas = t.areas ?? [];
+            const topics = t.topics ?? [];
+            // Demo-friendly fallback: ensure non-empty tags for actionable tasks.
+            const finalTopics = topics.length
+              ? topics
+              : allowedTopics.includes('Open Questions')
+                ? ['Open Questions']
+                : allowedTopics.slice(0, 1);
+            const finalAreas = areas.length ? areas : allowedAreas.slice(0, 1);
+            return { title: t.title, notes: t.notes, areas: finalAreas, topics: finalTopics };
+          });
+
+          // If model returned actionable but no tasks, synthesize one from subject.
+          if (taskDrafts.length === 0) {
+            taskDrafts = [{
+              title: String(m.subject ?? '(no subject)'),
+              areas: allowedAreas.slice(0, 1),
+              topics: allowedTopics.includes('Open Questions') ? ['Open Questions'] : allowedTopics.slice(0, 1),
+            }];
           }
-          if (areas.length === 0 && allowedAreas.length > 0) {
-            // Fallback to first seeded area (Exterior in PRD list) as a catch-all.
-            areas = [allowedAreas[0]];
-          }
-          if (topics.length || areas.length) confidence = 'auto_low';
         }
       } else {
+        // Heuristic fallback (no OpenAI configured).
         const extracted = extractTaskFromAgentmailMessage(m);
-        if (extracted.skipReason) actionable = false;
-        title = extracted.title;
-        notes = extracted.notes;
+        if (extracted.skipReason) {
+          actionable = false;
+        } else {
+          taskDrafts = [{ title: extracted.title, notes: extracted.notes, areas: [], topics: [] }];
+        }
       }
 
-      if (!actionable) {
+      if (!actionable || taskDrafts.length === 0) {
         skipped++;
-        const { error: insErr } = await supabase
-          .from('agentmail_message_processing')
-          .upsert(
-            {
-              message_id: messageId,
-              extractor_version: EXTRACTOR_VERSION,
-              processed_at: new Date().toISOString(),
-            },
-            { onConflict: 'message_id' }
-          );
-        if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
+        await supabase.from('agentmail_message_processing').upsert(
+          { message_id: messageId, extractor_version: EXTRACTOR_VERSION, processed_at: new Date().toISOString() },
+          { onConflict: 'message_id' }
+        );
         continue;
       }
 
-      if (!title) title = String(m.subject ?? '(no subject)');
-
-      // Upsert by source_message_id (so reprocess updates instead of duplicating)
-      const { data: existingTask, error: existingErr } = await supabase
-        .from('tasks')
-        .select('id, status')
-        .eq('source_message_id', messageId)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingErr) return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
-
-      const et = (existingTask ?? null) as null | { id?: string; status?: string };
-      const existingId = et?.id ?? null;
-
-      // Preserve status if user already moved it out of triage.
-      const desiredStatus = et?.status && et.status !== 'triage' ? et.status : 'triage';
-
-      const writePayloadBase = {
-        title,
-        status: desiredStatus,
-        source_message_id: messageId,
-        updated_at: new Date().toISOString(),
-      };
-
-      const tryInsert = async (payload: Record<string, unknown>) =>
-        supabase.from('tasks').insert(payload).select('id').maybeSingle();
-      const tryUpdate = async (payload: Record<string, unknown>) =>
-        supabase.from('tasks').update(payload).eq('id', existingId as string).select('id').maybeSingle();
-
-      let taskId: string | null = null;
-
-      if (existingId) {
-        let { data, error } = await tryUpdate({
-          ...writePayloadBase,
-          notes: notes ?? null,
-        });
-
-        if (error && /notes.*column/i.test(error.message)) {
-          ({ data, error } = await tryUpdate(writePayloadBase));
+      // On reprocess: wipe existing tasks for this message so we can re-insert cleanly.
+      if (reprocess) {
+        const { data: existingTasks } = await supabase
+          .from('tasks')
+          .select('id')
+          .eq('source_message_id', messageId);
+        const existingIds = ((existingTasks ?? []) as { id: string }[]).map((t) => t.id);
+        if (existingIds.length) {
+          // Delete tag_assignments first (no FK cascade), then tasks.
+          await supabase.from('tag_assignments').delete().in('target_id', existingIds);
+          await supabase.from('tasks').delete().eq('source_message_id', messageId);
         }
-
-        if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-        taskId = ((data as unknown as { id?: string } | null)?.id ?? existingId) as string;
-        updated++;
-      } else {
-        let { data, error } = await tryInsert({
-          ...writePayloadBase,
-          notes: notes ?? null,
-        });
-
-        if (error && /notes.*column/i.test(error.message)) {
-          ({ data, error } = await tryInsert(writePayloadBase));
-        }
-
-        if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-        taskId = ((data as unknown as { id?: string } | null)?.id ?? null) as string | null;
-        created++;
       }
 
-      // Tag assignments (task target). Replace on reprocess.
-      if (taskId) {
-        const wanted = new Set([...areas, ...topics]);
-        const toAssign = tags.filter((t) => wanted.has(t.name));
+      const debugTaskEntries: (typeof debug.samples)[0]['tasks'] = [];
 
-        // Clear existing assignments for this task.
-        const { error: delErr } = await supabase
-          .from('tag_assignments')
-          .delete()
-          .eq('target_type', 'task')
-          .eq('target_id', taskId);
+      for (const draft of taskDrafts) {
+        const title = draft.title || String(m.subject ?? '(no subject)');
 
-        if (delErr) {
-          console.warn('tag assignment delete failed', delErr.message);
+        // Check for existing task (non-reprocess path) to preserve status.
+        let existingStatus: string | null = null;
+        if (!reprocess) {
+          const { data: ex } = await supabase
+            .from('tasks')
+            .select('id, status')
+            .eq('source_message_id', messageId)
+            .eq('title', title)
+            .maybeSingle();
+          const exT = ex as null | { id?: string; status?: string };
+          existingStatus = exT?.status ?? null;
         }
 
-        let insertErr: string | undefined;
-        if (toAssign.length) {
-          const rows = toAssign.map((t) => ({
-            tag_id: t.id,
-            target_type: 'task',
-            target_id: taskId,
-            confidence,
-          }));
+        const status = existingStatus && existingStatus !== 'triage' ? existingStatus : 'triage';
+        const taskPayload: Record<string, unknown> = {
+          title,
+          status,
+          source_message_id: messageId,
+          notes: draft.notes ?? null,
+          updated_at: new Date().toISOString(),
+        };
 
-          const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
-          if (tagErr) {
-            // non-fatal for MVP; still record processing + task
-            insertErr = tagErr.message;
-            console.warn('tag assignment insert failed', tagErr.message);
+        const { data: taskRow, error: taskErr } = await supabase
+          .from('tasks')
+          .insert(taskPayload)
+          .select('id')
+          .maybeSingle();
+
+        if (taskErr) {
+          return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
+        }
+        const taskId = (taskRow as null | { id?: string })?.id ?? null;
+        created++;
+
+        // Assign tags.
+        if (taskId) {
+          const wanted = new Set([...draft.areas, ...draft.topics]);
+          const toAssign = tags.filter((t) => wanted.has(t.name));
+          if (toAssign.length) {
+            const rows = toAssign.map((t) => ({
+              tag_id: t.id, target_type: 'task', target_id: taskId, confidence,
+            }));
+            const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
+            if (tagErr) console.warn('tag assignment insert failed', tagErr.message);
           }
-        }
-
-        if (debug.enabled && debug.samples.length < 3) {
-          debug.samples.push({
-            messageId,
-            actionable,
-            suggestedAreas: areas,
-            suggestedTopics: topics,
+          debugTaskEntries.push({
+            title,
+            suggestedAreas: draft.areas,
+            suggestedTopics: draft.topics,
             matchedTagNames: toAssign.map((t) => t.name),
-            deleteError: delErr?.message,
-            insertError: insertErr,
           });
         }
       }
 
-      const { error: procErr } = await supabase
-        .from('agentmail_message_processing')
-        .upsert(
-          {
-            message_id: messageId,
-            extractor_version: EXTRACTOR_VERSION,
-            task_id: taskId,
-            processed_at: new Date().toISOString(),
-          },
-          { onConflict: 'message_id' }
-        );
+      // Increment updated count when previously processed (reprocess path deleted + re-created).
+      if (reprocess) { updated++; created -= taskDrafts.length; }
 
-      if (procErr) return NextResponse.json({ ok: false, error: procErr.message }, { status: 500 });
+      if (debug.enabled && debug.samples.length < 3) {
+        debug.samples.push({
+          messageId,
+          actionable,
+          taskCount: taskDrafts.length,
+          tasks: debugTaskEntries,
+        });
+      }
+
+      await supabase.from('agentmail_message_processing').upsert(
+        { message_id: messageId, extractor_version: EXTRACTOR_VERSION, processed_at: new Date().toISOString() },
+        { onConflict: 'message_id' }
+      );
     }
 
     return NextResponse.json({
@@ -298,7 +265,7 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    const status = msg.startsWith('Unauthorized') ? 401 : msg.startsWith('Server misconfigured') ? 500 : 500;
+    const status = msg.startsWith('Unauthorized') ? 401 : 500;
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
