@@ -72,16 +72,25 @@ export async function POST(req: Request) {
         continue;
       }
 
-      const { data: taskRow, error: taskErr } = await supabase
-        .from('tasks')
-        .insert({
-          title: extracted.title,
-          status: extracted.status,
-          source_message_id: messageId,
-          notes: extracted.notes ?? null,
-        })
-        .select('id')
-        .maybeSingle();
+      // Some deployments may be missing the `notes` column if the SQL wasn’t applied fully.
+      // If PostgREST complains about missing `notes`, retry the insert without it.
+      const insertBase = {
+        title: extracted.title,
+        status: extracted.status,
+        source_message_id: messageId,
+      };
+
+      const tryInsert = async (payload: Record<string, unknown>) =>
+        supabase.from('tasks').insert(payload).select('id').maybeSingle();
+
+      let { data: taskRow, error: taskErr } = await tryInsert({
+        ...insertBase,
+        notes: extracted.notes ?? null,
+      });
+
+      if (taskErr && /notes.*column/i.test(taskErr.message)) {
+        ({ data: taskRow, error: taskErr } = await tryInsert(insertBase));
+      }
 
       if (taskErr) {
         return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
