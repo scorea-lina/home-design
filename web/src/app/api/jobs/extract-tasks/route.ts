@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { extractTaskFromAgentmailMessage } from '@/lib/extractTask';
+import { extractWithOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +26,24 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServerClient();
 
+    // Load allowed tags (seeded in Supabase).
+    const { data: tagsData, error: tagsErr } = await supabase
+      .from('tags')
+      .select('id,name,category')
+      .eq('active', true);
+
+    if (tagsErr) {
+      return NextResponse.json({ ok: false, error: tagsErr.message }, { status: 500 });
+    }
+
+    const tags = (tagsData ?? []) as { id: string; name: string; category: 'area' | 'topic' }[];
+    const allowedAreas = tags.filter((t) => t.category === 'area').map((t) => t.name);
+    const allowedTopics = tags.filter((t) => t.category === 'topic').map((t) => t.name);
+
     // Pull latest messages. We avoid ordering by a specific column because schema can vary.
     const { data: msgs, error: msgErr } = await supabase
       .from('agentmail_messages')
-      .select('message_id, subject, from, text, ts, inserted_at')
+      .select('message_id, subject, from, to, text, ts, inserted_at')
       .limit(50);
 
     if (msgErr) {
@@ -58,25 +73,54 @@ export async function POST(req: Request) {
       }
       if (marker) continue;
 
-      const extracted = extractTaskFromAgentmailMessage(m);
-      if (extracted.skipReason) {
+      // v0: use OpenAI to decide actionable + extract title/tags.
+      // Keep heuristic as fallback if OpenAI is not configured.
+      let actionable = true;
+      let title = '';
+      let notes: string | undefined;
+      let areas: string[] = [];
+      let topics: string[] = [];
+      let confidence: 'auto_high' | 'auto_low' = 'auto_low';
+
+      if (process.env.OPENAI_API_KEY) {
+        const oa = await extractWithOpenAI({
+          subject: String(m.subject ?? ''),
+          from: String(m.from ?? ''),
+          to: String(m.to ?? ''),
+          text: String(m.text ?? ''),
+          allowedAreas,
+          allowedTopics,
+        });
+        actionable = oa.actionable;
+        title = (oa.title ?? '').trim();
+        notes = oa.notes;
+        areas = oa.areas ?? [];
+        topics = oa.topics ?? [];
+        confidence = oa.confidence === 'high' ? 'auto_high' : 'auto_low';
+      } else {
+        const extracted = extractTaskFromAgentmailMessage(m);
+        if (extracted.skipReason) actionable = false;
+        title = extracted.title;
+        notes = extracted.notes;
+      }
+
+      if (!actionable) {
         skipped++;
-        // Still mark processed to avoid repeated work
         const { error: insErr } = await supabase.from('agentmail_message_processing').insert({
           message_id: messageId,
           extractor_version: EXTRACTOR_VERSION,
         });
-        if (insErr) {
-          return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
-        }
+        if (insErr) return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
         continue;
       }
+
+      if (!title) title = String(m.subject ?? '(no subject)');
 
       // Some deployments may be missing the `notes` column if the SQL wasn’t applied fully.
       // If PostgREST complains about missing `notes`, retry the insert without it.
       const insertBase = {
-        title: extracted.title,
-        status: extracted.status,
+        title,
+        status: 'triage',
         source_message_id: messageId,
       };
 
@@ -85,18 +129,37 @@ export async function POST(req: Request) {
 
       let { data: taskRow, error: taskErr } = await tryInsert({
         ...insertBase,
-        notes: extracted.notes ?? null,
+        notes: notes ?? null,
       });
 
       if (taskErr && /notes.*column/i.test(taskErr.message)) {
         ({ data: taskRow, error: taskErr } = await tryInsert(insertBase));
       }
 
-      if (taskErr) {
-        return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
-      }
+      if (taskErr) return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
 
       const taskId = (taskRow as { id?: string } | null)?.id ?? null;
+
+      // Tag assignments (task target)
+      if (taskId) {
+        const wanted = new Set([...areas, ...topics]);
+        const toAssign = tags.filter((t) => wanted.has(t.name));
+
+        if (toAssign.length) {
+          const rows = toAssign.map((t) => ({
+            tag_id: t.id,
+            target_type: 'task',
+            target_id: taskId,
+            confidence,
+          }));
+
+          const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
+          if (tagErr) {
+            // non-fatal for MVP; still record processing + task
+            console.warn('tag assignment failed', tagErr.message);
+          }
+        }
+      }
 
       const { error: procErr } = await supabase.from('agentmail_message_processing').insert({
         message_id: messageId,
@@ -104,9 +167,7 @@ export async function POST(req: Request) {
         task_id: taskId,
       });
 
-      if (procErr) {
-        return NextResponse.json({ ok: false, error: procErr.message }, { status: 500 });
-      }
+      if (procErr) return NextResponse.json({ ok: false, error: procErr.message }, { status: 500 });
 
       created++;
     }
