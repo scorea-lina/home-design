@@ -24,6 +24,9 @@ export async function POST(req: Request) {
   try {
     requireJobSecret(req);
 
+    const url = new URL(req.url);
+    const reprocess = url.searchParams.get('reprocess') === '1';
+
     const supabase = getSupabaseServerClient();
 
     // Load allowed tags (seeded in Supabase).
@@ -54,24 +57,29 @@ export async function POST(req: Request) {
 
     let seen = 0;
     let created = 0;
+    let updated = 0;
     let skipped = 0;
+    let alreadyProcessed = 0;
 
     for (const m of messages) {
       const messageId = String(m.message_id ?? '').trim();
       if (!messageId) continue;
       seen++;
 
-      // idempotency: check processing marker
+      // idempotency: check processing marker (unless reprocess=1)
       const { data: marker, error: markerErr } = await supabase
         .from('agentmail_message_processing')
-        .select('message_id')
+        .select('message_id, task_id')
         .eq('message_id', messageId)
         .maybeSingle();
 
       if (markerErr) {
         return NextResponse.json({ ok: false, error: markerErr.message }, { status: 500 });
       }
-      if (marker) continue;
+      if (marker && !reprocess) {
+        alreadyProcessed++;
+        continue;
+      }
 
       // v0: use OpenAI to decide actionable + extract title/tags.
       // Keep heuristic as fallback if OpenAI is not configured.
@@ -116,34 +124,79 @@ export async function POST(req: Request) {
 
       if (!title) title = String(m.subject ?? '(no subject)');
 
-      // Some deployments may be missing the `notes` column if the SQL wasn’t applied fully.
-      // If PostgREST complains about missing `notes`, retry the insert without it.
-      const insertBase = {
+      // Upsert by source_message_id (so reprocess updates instead of duplicating)
+      const { data: existingTask, error: existingErr } = await supabase
+        .from('tasks')
+        .select('id, status')
+        .eq('source_message_id', messageId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingErr) return NextResponse.json({ ok: false, error: existingErr.message }, { status: 500 });
+
+      const et = (existingTask ?? null) as null | { id?: string; status?: string };
+      const existingId = et?.id ?? null;
+
+      // Preserve status if user already moved it out of triage.
+      const desiredStatus = et?.status && et.status !== 'triage' ? et.status : 'triage';
+
+      const writePayloadBase = {
         title,
-        status: 'triage',
+        status: desiredStatus,
         source_message_id: messageId,
+        updated_at: new Date().toISOString(),
       };
 
       const tryInsert = async (payload: Record<string, unknown>) =>
         supabase.from('tasks').insert(payload).select('id').maybeSingle();
+      const tryUpdate = async (payload: Record<string, unknown>) =>
+        supabase.from('tasks').update(payload).eq('id', existingId as string).select('id').maybeSingle();
 
-      let { data: taskRow, error: taskErr } = await tryInsert({
-        ...insertBase,
-        notes: notes ?? null,
-      });
+      let taskId: string | null = null;
 
-      if (taskErr && /notes.*column/i.test(taskErr.message)) {
-        ({ data: taskRow, error: taskErr } = await tryInsert(insertBase));
+      if (existingId) {
+        let { data, error } = await tryUpdate({
+          ...writePayloadBase,
+          notes: notes ?? null,
+        });
+
+        if (error && /notes.*column/i.test(error.message)) {
+          ({ data, error } = await tryUpdate(writePayloadBase));
+        }
+
+        if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        taskId = ((data as unknown as { id?: string } | null)?.id ?? existingId) as string;
+        updated++;
+      } else {
+        let { data, error } = await tryInsert({
+          ...writePayloadBase,
+          notes: notes ?? null,
+        });
+
+        if (error && /notes.*column/i.test(error.message)) {
+          ({ data, error } = await tryInsert(writePayloadBase));
+        }
+
+        if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        taskId = ((data as unknown as { id?: string } | null)?.id ?? null) as string | null;
+        created++;
       }
 
-      if (taskErr) return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
-
-      const taskId = (taskRow as { id?: string } | null)?.id ?? null;
-
-      // Tag assignments (task target)
+      // Tag assignments (task target). Replace on reprocess.
       if (taskId) {
         const wanted = new Set([...areas, ...topics]);
         const toAssign = tags.filter((t) => wanted.has(t.name));
+
+        // Clear existing assignments for this task.
+        const { error: delErr } = await supabase
+          .from('tag_assignments')
+          .delete()
+          .eq('target_type', 'task')
+          .eq('target_id', taskId);
+
+        if (delErr) {
+          console.warn('tag assignment delete failed', delErr.message);
+        }
 
         if (toAssign.length) {
           const rows = toAssign.map((t) => ({
@@ -156,23 +209,31 @@ export async function POST(req: Request) {
           const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
           if (tagErr) {
             // non-fatal for MVP; still record processing + task
-            console.warn('tag assignment failed', tagErr.message);
+            console.warn('tag assignment insert failed', tagErr.message);
           }
         }
       }
 
-      const { error: procErr } = await supabase.from('agentmail_message_processing').insert({
+      const { error: procErr } = await supabase.from('agentmail_message_processing').upsert({
         message_id: messageId,
         extractor_version: EXTRACTOR_VERSION,
         task_id: taskId,
+        processed_at: new Date().toISOString(),
       });
 
       if (procErr) return NextResponse.json({ ok: false, error: procErr.message }, { status: 500 });
-
-      created++;
     }
 
-    return NextResponse.json({ ok: true, seen, created, skipped, extractorVersion: EXTRACTOR_VERSION });
+    return NextResponse.json({
+      ok: true,
+      seen,
+      created,
+      updated,
+      skipped,
+      alreadyProcessed,
+      reprocess,
+      extractorVersion: EXTRACTOR_VERSION,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const status = msg.startsWith('Unauthorized') ? 401 : msg.startsWith('Server misconfigured') ? 500 : 500;
