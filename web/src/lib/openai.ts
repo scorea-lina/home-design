@@ -36,7 +36,8 @@ Rules:
 - title: short imperative.
 - notes: 1-3 bullets in plain text (use '\n' between bullets), or null.
 - areas/topics MUST be chosen ONLY from the allowed lists.
-- If none apply, return empty arrays.
+- If actionable=true, choose 1-2 Areas and 1-2 Topics even if low confidence (best guess).
+- If you truly cannot infer, pick the most generic Topic (prefer "Open Questions" or "Decisions") and pick your best-guess Area.
 
 Allowed Areas:
 ${input.allowedAreas.map((x) => `- ${x}`).join('\n')}

@@ -118,6 +118,20 @@ export async function POST(req: Request) {
         areas = oa.areas ?? [];
         topics = oa.topics ?? [];
         confidence = oa.confidence === 'high' ? 'auto_high' : 'auto_low';
+
+        // Demo-friendly guarantee: if actionable, ensure non-empty tags using seeded PRD set.
+        // Prefer generic topics if model returns none.
+        if (actionable) {
+          if (topics.length === 0) {
+            if (allowedTopics.includes('Open Questions')) topics = ['Open Questions'];
+            else if (allowedTopics.includes('Decisions')) topics = ['Decisions'];
+          }
+          if (areas.length === 0 && allowedAreas.length > 0) {
+            // Fallback to first seeded area (Exterior in PRD list) as a catch-all.
+            areas = [allowedAreas[0]];
+          }
+          if (topics.length || areas.length) confidence = 'auto_low';
+        }
       } else {
         const extracted = extractTaskFromAgentmailMessage(m);
         if (extracted.skipReason) actionable = false;
