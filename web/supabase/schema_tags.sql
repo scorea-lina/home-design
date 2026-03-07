@@ -3,10 +3,24 @@
 
 create extension if not exists pgcrypto;
 
--- Enums
-create type if not exists public.tag_category_v0 as enum ('area', 'topic');
-create type if not exists public.tag_confidence_v0 as enum ('manual', 'auto_high', 'auto_low');
-create type if not exists public.tag_target_type_v0 as enum ('task', 'inbox_item', 'transcript', 'chunk', 'attachment', 'canvas_version');
+-- Enums (Postgres doesn't support CREATE TYPE IF NOT EXISTS reliably; use DO blocks)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE t.typname='tag_category_v0' AND n.nspname='public') THEN
+    CREATE TYPE public.tag_category_v0 AS ENUM ('area', 'topic');
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE t.typname='tag_confidence_v0' AND n.nspname='public') THEN
+    CREATE TYPE public.tag_confidence_v0 AS ENUM ('manual', 'auto_high', 'auto_low');
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE t.typname='tag_target_type_v0' AND n.nspname='public') THEN
+    CREATE TYPE public.tag_target_type_v0 AS ENUM ('task', 'inbox_item', 'transcript', 'chunk', 'attachment', 'canvas_version');
+  END IF;
+END $$;
 
 -- Tables
 create table if not exists public.tags (
