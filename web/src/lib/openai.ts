@@ -15,7 +15,8 @@ export async function extractWithOpenAI(input: {
   allowedAreas: string[];
   allowedTopics: string[];
 }): Promise<OpenAIExtractResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  // Accept a project-specific alias (seen in some local setups) to avoid reconfig churn.
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.HOMEDESIGN_OPENAI_API_KEY;
   if (!apiKey) throw new Error('Missing OPENAI_API_KEY');
 
   const prompt = `You are extracting actionable tasks for a home design project hub.
