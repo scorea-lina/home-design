@@ -33,8 +33,13 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
   const subject = pickText(row, ['subject', 'message_subject'], '(no subject)');
   const from = pickText(row, ['from_name', 'from', 'from_email', 'sender', 'sender_email', 'mail_from'], '(unknown sender)');
   const to = pickText(row, ['to', 'to_email', 'recipient', 'recipient_email'], '');
-  const dateRaw = row.ts ?? row.received_at ?? row.inserted_at ?? row.fetched_at ?? row.date ?? row.sent_at ?? row.created_at;
-  const date = dateRaw ? new Date(String(dateRaw)).toLocaleString() : '';
+  const tsRaw = row.ts ?? row.received_at ?? row.inserted_at ?? row.fetched_at ?? row.date ?? row.sent_at ?? row.created_at;
+  let date = '';
+  if (tsRaw != null) {
+    const n = Number(tsRaw);
+    const d = (!isNaN(n) && n > 1_000_000_000) ? new Date(n * 1000) : new Date(String(tsRaw));
+    date = isNaN(d.getTime()) ? '' : d.toLocaleString();
+  }
   const body = pickText(row, ['text', 'body_text', 'raw_text', 'body', 'raw', 'snippet'], '(no body)');
 
   return (
