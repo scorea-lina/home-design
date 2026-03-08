@@ -2,20 +2,26 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-type ColumnId = 'triage' | 'todo' | 'doing' | 'done';
+type ColumnId = 'todo' | 'done';
+
+type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
 
 type Task = {
   id: string;
   title: string;
-  status: ColumnId;
+  status: RawStatus;
   source_message_id?: string | null;
   notes?: string | null;
 };
 
+function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
+  if (status === 'done') return 'done';
+  // Back-compat: collapse all non-done states into "todo".
+  return 'todo';
+}
+
 const columns: { id: ColumnId; title: string }[] = [
-  { id: 'triage', title: 'Triage' },
   { id: 'todo', title: 'To Do' },
-  { id: 'doing', title: 'Doing' },
   { id: 'done', title: 'Done' },
 ];
 
@@ -80,8 +86,10 @@ export default function KanbanBoard() {
   }
 
   const grouped = useMemo(() => {
-    const g: Record<ColumnId, Task[]> = { triage: [], todo: [], doing: [], done: [] };
-    for (const t of tasks) g[t.status ?? 'triage'].push(t);
+    const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
+    for (const t of tasks) {
+      g[normalizeStatus(t.status)].push(t);
+    }
     return g;
   }, [tasks]);
 
@@ -124,7 +132,7 @@ export default function KanbanBoard() {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {columns.map((col) => (
           <div key={col.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -139,28 +147,32 @@ export default function KanbanBoard() {
                 </div>
               ) : null}
 
-              {grouped[col.id].map((t) => (
-                <div key={t.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
-                  <div className="text-sm text-zinc-100">{t.title}</div>
-                  {t.source_message_id ? (
-                    <div className="mt-1 text-xs text-zinc-500">Source: inbox</div>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {columns
-                      .filter((c) => c.id !== t.status)
-                      .map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => void move(t.id, c.id)}
-                          className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
-                          disabled={loading}
-                        >
-                          Move to {c.title}
-                        </button>
-                      ))}
+              {grouped[col.id].map((t) => {
+                const current = normalizeStatus(t.status);
+                return (
+                  <div key={t.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+                    <div className="text-base font-medium text-zinc-100">{t.title}</div>
+                    {t.source_message_id ? (
+                      <div className="mt-1 text-xs text-zinc-500">Source: inbox</div>
+                    ) : null}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {columns
+                        .filter((c) => c.id !== current)
+                        .map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => void move(t.id, c.id)}
+                            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                            disabled={loading}
+                          >
+                            Move to {c.title}
+                          </button>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

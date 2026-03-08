@@ -14,6 +14,12 @@ export async function GET() {
 
   const rows = (data ?? []) as Record<string, unknown>[];
 
+  // Normalize legacy statuses so clients never see triage/doing.
+  for (const r of rows) {
+    const s = String(r.status ?? '');
+    if (s === 'triage' || s === 'doing') r.status = 'todo';
+  }
+
   // best-effort sort by updated_at/created_at
   rows.sort((a, b) => {
     const at = a.updated_at ?? a.created_at;
@@ -35,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Missing title' }, { status: 400 });
   }
 
-  const { error } = await supabase.from('tasks').insert({ title, status: 'triage' });
+  const { error } = await supabase.from('tasks').insert({ title, status: 'todo' });
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
