@@ -579,6 +579,7 @@ function InlineTagEditor({
   const [q, setQ] = useState('');
   const [allTags, setAllTags] = useState<{ id: string; name: string; category: string }[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -588,6 +589,29 @@ function InlineTagEditor({
         if (j.ok) setAllTags(j.tags ?? []);
       })
       .catch(() => {});
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+
+    function onPointerDown(e: PointerEvent) {
+      const el = popRef.current;
+      if (!el) return;
+      const target = e.target as Node | null;
+      if (target && !el.contains(target)) setOpen(false);
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    // capture=true so it still fires even if inner handlers stopPropagation
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
   }, [open]);
 
   const selectedIds = useMemo(() => {
@@ -657,6 +681,7 @@ function InlineTagEditor({
 
       {open ? (
         <div
+          ref={popRef}
           className="rounded-lg border border-zinc-800 bg-zinc-950 p-2"
           onClick={(e) => e.stopPropagation()}
         >
