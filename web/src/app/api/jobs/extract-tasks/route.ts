@@ -202,7 +202,10 @@ export async function POST(req: Request) {
         const summary = summaryText ? summaryText.slice(0, 500) : null;
 
         const ts = m.ts ?? m.inserted_at ?? null;
-        const sourceEmailDate = ts ? new Date(String(ts)).toISOString() : null;
+        let sourceEmailDate: string | null = null;
+        if (ts) {
+          try { sourceEmailDate = new Date(String(ts)).toISOString(); } catch { sourceEmailDate = null; }
+        }
 
         const taskPayload: Record<string, unknown> = {
           title,
