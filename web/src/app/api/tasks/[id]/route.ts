@@ -15,6 +15,7 @@ export async function PATCH(
     status?: string;
     title?: string;
     notes?: string | null;
+    position?: number | null;
   };
 
   const supabase = getSupabaseServerClient();
@@ -30,6 +31,11 @@ export async function PATCH(
   // Apply notes update if provided.
   if (body.notes !== undefined) {
     patch.notes = body.notes ? String(body.notes).trim() : null;
+  }
+
+  // Apply position update if provided (null = unset).
+  if (body.position !== undefined) {
+    patch.position = body.position != null ? Number(body.position) : null;
   }
 
   // Apply status update if provided.

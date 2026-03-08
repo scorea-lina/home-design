@@ -18,6 +18,9 @@ type Task = {
   summary?: string | null;
   source_email_date?: string | null;
   notes?: string | null;
+  position?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   tags?: TaskTag[];
 };
 
@@ -46,6 +49,8 @@ export default function KanbanBoard() {
   const [editTitle, setEditTitle] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -122,6 +127,31 @@ export default function KanbanBoard() {
     await patchStatus(taskId, to);
   }
 
+  async function reorderTodo(draggedId: string, targetId: string) {
+    if (draggedId === targetId) return;
+    // Compute new positions: splice dragged item before target in the current todo list.
+    const todoTasks = tasks.filter((t) => String(t.status) === 'todo' || String(t.status) === 'triage' || String(t.status) === 'doing');
+    const rest = todoTasks.filter((t) => t.id !== draggedId);
+    const targetIdx = rest.findIndex((t) => t.id === targetId);
+    const newOrder = [...rest];
+    newOrder.splice(targetIdx === -1 ? rest.length : targetIdx, 0, todoTasks.find((t) => t.id === draggedId)!);
+    // Assign sequential positions starting at 1.
+    const posMap: Record<string, number> = {};
+    newOrder.forEach((t, i) => { posMap[t.id] = i + 1; });
+    // Optimistic update.
+    setTasks((ts) => ts.map((t) => posMap[t.id] != null ? { ...t, position: posMap[t.id] } : t));
+    // Persist all changed positions.
+    await Promise.all(
+      Object.entries(posMap).map(([id, position]) =>
+        fetch(`/api/tasks/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ position }),
+        })
+      )
+    );
+  }
+
   async function saveEdit(taskId: string) {
     const t = editTitle.trim();
     if (!t) return;
@@ -170,6 +200,23 @@ export default function KanbanBoard() {
     for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }
+
+    // Ensure stable, immediate UI ordering:
+    // - To Do: position ASC (null last)
+    // - Done: updated_at/created_at DESC
+    g.todo.sort((a, b) => {
+      const ap = a.position != null ? Number(a.position) : Infinity;
+      const bp = b.position != null ? Number(b.position) : Infinity;
+      return ap - bp;
+    });
+    g.done.sort((a, b) => {
+      const at = a.updated_at ?? a.created_at;
+      const bt = b.updated_at ?? b.created_at;
+      const an = at ? +new Date(String(at)) : 0;
+      const bn = bt ? +new Date(String(bt)) : 0;
+      return bn - an;
+    });
+
     return g;
   }, [visibleTasks]);
 
@@ -319,6 +366,17 @@ export default function KanbanBoard() {
                     ref={(el) => { cardRefs.current[t.id] = el; }}
                     role="button"
                     tabIndex={0}
+                    draggable={col.id === 'todo'}
+                    onDragStart={() => { dragIdRef.current = t.id; }}
+                    onDragEnd={() => { dragIdRef.current = null; setDragOverId(null); }}
+                    onDragOver={(e) => { if (col.id === 'todo') { e.preventDefault(); setDragOverId(t.id); } }}
+                    onDragLeave={() => setDragOverId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverId(null);
+                      const from = dragIdRef.current;
+                      if (from && from !== t.id && col.id === 'todo') void reorderTodo(from, t.id);
+                    }}
                     onClick={() => setExpanded((p) => ({ ...p, [t.id]: !p[t.id] }))}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -329,6 +387,8 @@ export default function KanbanBoard() {
                     className={`cursor-pointer rounded-lg border p-4 hover:bg-zinc-900/60 ${
                       highlightId === t.id
                         ? 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-400 ring-offset-1 ring-offset-black transition-all duration-700'
+                        : dragOverId === t.id
+                        ? 'border-zinc-500 bg-zinc-800/60'
                         : 'border-zinc-800 bg-zinc-900/40'
                     }`}
                   >

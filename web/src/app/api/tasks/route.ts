@@ -11,7 +11,7 @@ export async function GET() {
   // Exclude archived tasks — those are served by /api/archive.
   const { data, error } = await supabase
     .from('tasks')
-    .select('id,title,status,source_message_id,summary,source_email_date,notes,created_at,updated_at')
+    .select('id,title,status,source_message_id,summary,source_email_date,notes,position,created_at,updated_at')
     .neq('status', 'archived')
     .limit(200);
 
@@ -54,8 +54,16 @@ export async function GET() {
     if (s === 'triage' || s === 'doing') r.status = 'todo';
   }
 
-  // best-effort sort by updated_at/created_at
+  // Sort: To Do by position ASC (null last), Done by updated_at/created_at DESC.
   rows.sort((a, b) => {
+    const as = String(a.status ?? 'todo');
+    const bs = String(b.status ?? 'todo');
+    const isTodo = (s: string) => s === 'todo';
+    if (isTodo(as) && isTodo(bs)) {
+      const ap = a.position != null ? Number(a.position) : Infinity;
+      const bp = b.position != null ? Number(b.position) : Infinity;
+      return ap - bp;
+    }
     const at = a.updated_at ?? a.created_at;
     const bt = b.updated_at ?? b.created_at;
     const an = at ? +new Date(String(at)) : 0;
