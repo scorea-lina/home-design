@@ -11,6 +11,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('tasks')
     .select('id,title,status,source_message_id,summary,source_email_date,notes,created_at,updated_at')
+    .neq('status', 'archived')
     .limit(200);
 
   if (error) {

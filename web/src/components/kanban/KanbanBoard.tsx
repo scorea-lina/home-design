@@ -73,22 +73,38 @@ export default function KanbanBoard() {
     }
   }
 
-  async function move(taskId: string, to: ColumnId) {
+  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived') {
+    const prev = tasks;
+
+    // Optimistic UI
+    if (status === 'archived') {
+      setTasks((ts) => ts.filter((t) => t.id !== taskId));
+    } else {
+      setTasks((ts) => ts.map((t) => (t.id === taskId ? { ...t, status } : t)));
+    }
+
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: to }),
+        body: JSON.stringify({ status }),
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+
+      // Re-sync from server in case other fields changed.
       await refresh();
     } catch (e) {
+      setTasks(prev);
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
     }
+  }
+
+  async function move(taskId: string, to: ColumnId) {
+    await patchStatus(taskId, to);
   }
 
   const grouped = useMemo(() => {
@@ -185,20 +201,47 @@ export default function KanbanBoard() {
                     }}
                     className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60"
                   >
-                    {/* Collapsed header (always visible): title + tags only */}
-                    <div className="text-base font-medium text-zinc-100">{t.title}</div>
-                    {tags.length ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {tags.map((tag) => (
-                          <span
-                            key={`${tag.category}:${tag.name}`}
-                            className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[11px] text-zinc-300"
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
+                    {/* Collapsed header (always visible): title + tags + CTAs */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-base font-medium text-zinc-100">{t.title}</div>
+                        {tags.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {tags.map((tag) => (
+                              <span
+                                key={`${tag.category}:${tag.name}`}
+                                className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[11px] text-zinc-300"
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
+
+                      <div className="flex shrink-0 flex-col gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void patchStatus(t.id, 'done');
+                          }}
+                          className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                          disabled={loading || current === 'done'}
+                        >
+                          Mark as Done
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void patchStatus(t.id, 'archived');
+                          }}
+                          className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                          disabled={loading}
+                        >
+                          Archive
+                        </button>
+                      </div>
+                    </div>
 
                     {/* Expanded detail */}
                     {isExpanded ? (
