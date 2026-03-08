@@ -197,8 +197,12 @@ export async function POST(req: Request) {
         const status = existingStatus === 'done' ? 'done' : 'todo';
 
         const emailText = String(m.text ?? '').trim();
-        const summary = emailText ? emailText.slice(0, 500) : null;
-        const sourceEmailDate = m.ts ? new Date(String(m.ts)).toISOString() : null;
+        const emailRaw = String(m.raw ?? '').trim();
+        const summaryText = emailText || emailRaw;
+        const summary = summaryText ? summaryText.slice(0, 500) : null;
+
+        const ts = m.ts ?? m.inserted_at ?? null;
+        const sourceEmailDate = ts ? new Date(String(ts)).toISOString() : null;
 
         const taskPayload: Record<string, unknown> = {
           title,

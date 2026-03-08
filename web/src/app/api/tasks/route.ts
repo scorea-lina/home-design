@@ -6,7 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase.from('tasks').select('*').limit(200);
+  // Explicit column list so we reliably return new task detail fields.
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id,title,status,source_message_id,summary,source_email_date,notes,created_at,updated_at')
+    .limit(200);
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
