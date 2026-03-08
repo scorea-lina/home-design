@@ -27,7 +27,7 @@ export async function GET() {
   if (ids.length) {
     const { data: assigns, error: tagErr } = await supabase
       .from('tag_assignments')
-      .select('target_id, tags(name, category)')
+      .select('target_id, tags(id,name,category)')
       .eq('target_type', 'task')
       .in('target_id', ids);
 
