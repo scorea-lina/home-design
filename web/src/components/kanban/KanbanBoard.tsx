@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import NewTaskModal from './NewTaskModal';
 
 type ColumnId = 'todo' | 'done';
 
@@ -40,6 +41,7 @@ export default function KanbanBoard() {
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [showNewTask, setShowNewTask] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -177,21 +179,11 @@ export default function KanbanBoard() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Quick add…"
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 md:w-[360px]"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void addTask();
-          }}
-        />
         <button
-          onClick={() => void addTask()}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
-          disabled={loading}
+          onClick={() => setShowNewTask(true)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-800"
         >
-          Add task
+          ＋ New Task
         </button>
         <button
           onClick={() => void refresh()}
@@ -200,8 +192,22 @@ export default function KanbanBoard() {
         >
           Refresh
         </button>
-        <div className="text-xs text-zinc-500">Backed by Supabase `public.tasks`.</div>
       </div>
+
+      {/* New Task modal */}
+      {showNewTask ? (
+        <NewTaskModal
+          onClose={() => setShowNewTask(false)}
+          onCreated={(task) => {
+            // Optimistic insert into To Do.
+            setTasks((ts) => [
+              { id: task.id, title: task.title, status: 'todo', notes: task.notes ?? null, tags: task.tags },
+              ...ts,
+            ]);
+            setShowNewTask(false);
+          }}
+        />
+      ) : null}
 
       {/* Tag filter pills */}
       {allAreaTags.length > 0 ? (
