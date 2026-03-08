@@ -36,6 +36,7 @@ export default function KanbanBoard() {
   const [title, setTitle] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [archiveCount, setArchiveCount] = useState<number | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   async function refresh() {
     setLoading(true);
@@ -112,13 +113,32 @@ export default function KanbanBoard() {
     await patchStatus(taskId, to);
   }
 
+  // Derive unique area tags across all loaded tasks for filter pills.
+  const allAreaTags = useMemo(() => {
+    const seen = new Set<string>();
+    for (const t of tasks) {
+      for (const tag of t.tags ?? []) {
+        if (tag.category === 'area') seen.add(tag.name);
+      }
+    }
+    return Array.from(seen).sort();
+  }, [tasks]);
+
+  // Apply tag filters client-side (show task if it has ANY of the active filters).
+  const visibleTasks = useMemo(() => {
+    if (activeFilters.size === 0) return tasks;
+    return tasks.filter((t) =>
+      (t.tags ?? []).some((tag) => activeFilters.has(tag.name))
+    );
+  }, [tasks, activeFilters]);
+
   const grouped = useMemo(() => {
     const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }
     return g;
-  }, [tasks]);
+  }, [visibleTasks]);
 
   useEffect(() => {
     void refresh();
@@ -152,6 +172,43 @@ export default function KanbanBoard() {
         </button>
         <div className="text-xs text-zinc-500">Backed by Supabase `public.tasks`.</div>
       </div>
+
+      {/* Tag filter pills */}
+      {allAreaTags.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {allAreaTags.map((tag) => {
+            const active = activeFilters.has(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() =>
+                  setActiveFilters((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(tag)) next.delete(tag);
+                    else next.add(tag);
+                    return next;
+                  })
+                }
+                className={
+                  active
+                    ? 'rounded-full border border-zinc-400 bg-zinc-200 px-3 py-1 text-xs font-medium text-zinc-900'
+                    : 'rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                }
+              >
+                {tag}
+              </button>
+            );
+          })}
+          {activeFilters.size > 0 ? (
+            <button
+              onClick={() => setActiveFilters(new Set())}
+              className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-500 hover:text-zinc-200"
+            >
+              Clear filters ×
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
