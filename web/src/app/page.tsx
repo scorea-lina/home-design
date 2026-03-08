@@ -1,5 +1,9 @@
-import KanbanBoard from '@/components/kanban/KanbanBoard';
+'use client';
+
+import dynamic from 'next/dynamic';
 import SearchBar from '@/components/search/SearchBar';
+
+const KanbanBoard = dynamic(() => import('@/components/kanban/KanbanBoard'), { ssr: false });
 
 export default function KanbanHomePage() {
   return (
