@@ -6,13 +6,46 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase.from('tasks').select('*').limit(200);
+
+  // Explicit column list so we reliably return new task detail fields.
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id,title,status,source_message_id,summary,source_email_date,notes,created_at,updated_at')
+    .neq('status', 'archived')
+    .limit(200);
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
   const rows = (data ?? []) as Record<string, unknown>[];
+
+  // Fetch tag assignments for these tasks (Areas + Topics) so the Kanban can render tags.
+  const ids = rows.map((r) => String(r.id ?? '')).filter(Boolean);
+  const tagsByTaskId: Record<string, { name: string; category: string }[]> = {};
+  if (ids.length) {
+    const { data: assigns, error: tagErr } = await supabase
+      .from('tag_assignments')
+      .select('target_id, tags(name, category)')
+      .eq('target_type', 'task')
+      .in('target_id', ids);
+
+    if (!tagErr && assigns) {
+      for (const a of assigns as any[]) {
+        const tid = String(a.target_id ?? '');
+        const t = a.tags;
+        if (!tid || !t) continue;
+        const tag = { name: String(t.name ?? ''), category: String(t.category ?? '') };
+        if (!tag.name) continue;
+        (tagsByTaskId[tid] ??= []).push(tag);
+      }
+    }
+  }
+
+  for (const r of rows) {
+    const tid = String(r.id ?? '');
+    (r as any).tags = tagsByTaskId[tid] ?? [];
+  }
 
   // Normalize legacy statuses so clients never see triage/doing.
   for (const r of rows) {
