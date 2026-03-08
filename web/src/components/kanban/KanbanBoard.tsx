@@ -21,7 +21,6 @@ type Task = {
 
 function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
   if (status === 'done') return 'done';
-  // Back-compat: collapse all non-done states into "todo".
   return 'todo';
 }
 
@@ -36,6 +35,7 @@ export default function KanbanBoard() {
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [archiveCount, setArchiveCount] = useState<number | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -50,6 +50,12 @@ export default function KanbanBoard() {
     } finally {
       setLoading(false);
     }
+
+    // Refresh archive count in background (best-effort).
+    fetch('/api/archive', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j: any) => { if (typeof j.total === 'number') setArchiveCount(j.total); })
+      .catch(() => {});
   }
 
   async function addTask() {
@@ -94,7 +100,6 @@ export default function KanbanBoard() {
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
-      // Re-sync from server in case other fields changed.
       await refresh();
     } catch (e) {
       setTasks(prev);
@@ -296,6 +301,16 @@ export default function KanbanBoard() {
           </div>
         ))}
       </section>
+
+      {/* Archive entry point */}
+      <div className="pt-2 text-center">
+        <a
+          href="/archive"
+          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-300"
+        >
+          View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
+        </a>
+      </div>
     </div>
   );
 }

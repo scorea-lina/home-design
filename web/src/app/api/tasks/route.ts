@@ -8,6 +8,7 @@ export async function GET() {
   const supabase = getSupabaseServerClient();
 
   // Explicit column list so we reliably return new task detail fields.
+  // Exclude archived tasks — those are served by /api/archive.
   const { data, error } = await supabase
     .from('tasks')
     .select('id,title,status,source_message_id,summary,source_email_date,notes,created_at,updated_at')

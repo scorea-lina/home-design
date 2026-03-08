@@ -25,7 +25,12 @@ export async function PATCH(
   const supabase = getSupabaseServerClient();
   const { error } = await supabase
     .from('tasks')
-    .update({ status: normalized, updated_at: new Date().toISOString() })
+    .update({
+      status: normalized,
+      updated_at: new Date().toISOString(),
+      // Set archived_at when archiving; clear it when restoring.
+      archived_at: normalized === 'archived' ? new Date().toISOString() : null,
+    })
     .eq('id', taskId);
 
   if (error) {
