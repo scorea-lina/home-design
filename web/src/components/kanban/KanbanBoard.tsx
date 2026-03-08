@@ -19,6 +19,8 @@ type Task = {
   source_email_date?: string | null;
   notes?: string | null;
   position?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   tags?: TaskTag[];
 };
 
@@ -198,6 +200,23 @@ export default function KanbanBoard() {
     for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }
+
+    // Ensure stable, immediate UI ordering:
+    // - To Do: position ASC (null last)
+    // - Done: updated_at/created_at DESC
+    g.todo.sort((a, b) => {
+      const ap = a.position != null ? Number(a.position) : Infinity;
+      const bp = b.position != null ? Number(b.position) : Infinity;
+      return ap - bp;
+    });
+    g.done.sort((a, b) => {
+      const at = a.updated_at ?? a.created_at;
+      const bt = b.updated_at ?? b.created_at;
+      const an = at ? +new Date(String(at)) : 0;
+      const bn = bt ? +new Date(String(bt)) : 0;
+      return bn - an;
+    });
+
     return g;
   }, [visibleTasks]);
 
