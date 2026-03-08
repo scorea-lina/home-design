@@ -8,7 +8,7 @@ type ColumnId = 'todo' | 'done';
 
 type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
 
-type TaskTag = { name: string; category: 'area' | 'topic' | (string & {}) };
+type TaskTag = { id?: string; name: string; category: 'area' | 'topic' | (string & {}) };
 
 type Task = {
   id: string;
@@ -484,6 +484,15 @@ export default function KanbanBoard() {
                               Edit
                             </button>
 
+                            {/* Inline tag editor */}
+                            <InlineTagEditor
+                              taskId={t.id}
+                              tags={t.tags ?? []}
+                              onChange={(nextTags) => {
+                                setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, tags: nextTags } : tk)));
+                              }}
+                            />
+
                             {t.summary ? (
                               <div className="text-sm text-zinc-300">
                                 <div className="text-xs font-medium text-zinc-500">Summary</div>
@@ -552,6 +561,143 @@ export default function KanbanBoard() {
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
         </a>
       </div>
+    </div>
+  );
+}
+
+
+function InlineTagEditor({
+  taskId,
+  tags,
+  onChange,
+}: {
+  taskId: string;
+  tags: TaskTag[];
+  onChange: (tags: TaskTag[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [allTags, setAllTags] = useState<{ id: string; name: string; category: string }[]>([]);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/tags')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok) setAllTags(j.tags ?? []);
+      })
+      .catch(() => {});
+  }, [open]);
+
+  const selectedIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of tags) {
+      if (t.id) s.add(String(t.id));
+    }
+    return s;
+  }, [tags]);
+
+  const filtered = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return allTags;
+    return allTags.filter((t) =>
+      t.name.toLowerCase().includes(qq) || t.category.toLowerCase().includes(qq)
+    );
+  }, [allTags, q]);
+
+  async function toggle(tag: { id: string; name: string; category: string }) {
+    const enabled = !selectedIds.has(tag.id);
+
+    // Optimistic update local chips immediately.
+    const prev = tags;
+    const next: TaskTag[] = enabled
+      ? [{ id: tag.id, name: tag.name, category: tag.category }, ...tags]
+      : tags.filter((t) => String(t.id ?? '') !== tag.id);
+    onChange(next);
+
+    setSaving(tag.id);
+    try {
+      const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/tags`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tagId: tag.id, enabled }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    } catch {
+      // rollback
+      onChange(prev);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const visibleChips = (tags ?? []).slice(0, 12);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {visibleChips.map((t) => (
+          <span
+            key={`${t.id ?? t.name}-${t.name}`}
+            className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[10px] text-zinc-400"
+          >
+            {t.name}
+          </span>
+        ))}
+        <button
+          type="button"
+          onClick={() => setOpen((p) => !p)}
+          className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+        >
+          ＋ tag
+        </button>
+      </div>
+
+      {open ? (
+        <div
+          className="rounded-lg border border-zinc-800 bg-zinc-950 p-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search tags…"
+            className="mb-2 w-full rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+          />
+          <div className="max-h-52 overflow-auto">
+            {filtered.length === 0 ? (
+              <div className="p-2 text-xs text-zinc-500">No tags found.</div>
+            ) : (
+              <div className="grid gap-1">
+                {filtered.map((tag) => {
+                  const sel = selectedIds.has(tag.id);
+                  const busy = saving === tag.id;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => void toggle(tag)}
+                      disabled={!!saving}
+                      className={
+                        sel
+                          ? 'flex items-center justify-between rounded border border-zinc-400 bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-900'
+                          : 'flex items-center justify-between rounded border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-600'
+                      }
+                    >
+                      <span className="truncate">{tag.name}</span>
+                      <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wider opacity-70">
+                        {busy ? '…' : sel ? 'ON' : tag.category}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
