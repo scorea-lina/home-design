@@ -42,6 +42,10 @@ export default function KanbanBoard() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showNewTask, setShowNewTask] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -116,6 +120,30 @@ export default function KanbanBoard() {
 
   async function move(taskId: string, to: ColumnId) {
     await patchStatus(taskId, to);
+  }
+
+  async function saveEdit(taskId: string) {
+    const t = editTitle.trim();
+    if (!t) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: t, notes: editNotes.trim() || null }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      // Optimistic update in local state.
+      setTasks((ts) => ts.map((tk) =>
+        tk.id === taskId ? { ...tk, title: t, notes: editNotes.trim() || null } : tk
+      ));
+      setEditingId(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   // Derive unique area tags across all loaded tasks for filter pills.
@@ -348,48 +376,103 @@ export default function KanbanBoard() {
 
                     {/* Expanded detail */}
                     {isExpanded ? (
-                      <div className="mt-3 space-y-2">
-                        {t.summary ? (
-                          <div className="text-sm text-zinc-300">
-                            <div className="text-xs font-medium text-zinc-500">Summary</div>
-                            <div className="mt-1 whitespace-pre-wrap">{t.summary}</div>
-                          </div>
-                        ) : null}
-
-                        {date ? (
-                          <div className="text-sm text-zinc-300">
-                            <span className="text-xs font-medium text-zinc-500">Email sent:</span>{' '}
-                            {date}
-                          </div>
-                        ) : null}
-
-                        {inboxHref ? (
-                          <a
-                            href={inboxHref}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-block text-sm text-zinc-200 underline underline-offset-4 hover:text-white"
-                          >
-                            View email →
-                          </a>
-                        ) : null}
-
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {columns
-                            .filter((c) => c.id !== current)
-                            .map((c) => (
+                      <div className="mt-3 space-y-3" onClick={(e) => e.stopPropagation()}>
+                        {editingId === t.id ? (
+                          /* Inline edit form */
+                          <div className="space-y-2">
+                            <input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              className="w-full rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none"
+                              placeholder="Title"
+                              autoFocus
+                            />
+                            <textarea
+                              value={editNotes}
+                              onChange={(e) => setEditNotes(e.target.value)}
+                              rows={3}
+                              className="w-full rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none"
+                              placeholder="Notes (optional)"
+                            />
+                            <div className="flex gap-2">
                               <button
-                                key={c.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void move(t.id, c.id);
-                                }}
-                                className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
-                                disabled={loading}
+                                onClick={() => void saveEdit(t.id)}
+                                disabled={editSaving || !editTitle.trim()}
+                                className="rounded border border-zinc-500 px-2 py-1 text-xs text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
                               >
-                                Move to {c.title}
+                                {editSaving ? 'Saving…' : 'Save'}
                               </button>
-                            ))}
-                        </div>
+                              <button
+                                onClick={() => setEditingId(null)}
+                                className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Read-only expanded view */
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditTitle(t.title);
+                                setEditNotes(t.notes ?? '');
+                                setEditingId(t.id);
+                              }}
+                              className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                            >
+                              Edit
+                            </button>
+
+                            {t.summary ? (
+                              <div className="text-sm text-zinc-300">
+                                <div className="text-xs font-medium text-zinc-500">Summary</div>
+                                <div className="mt-1 whitespace-pre-wrap">{t.summary}</div>
+                              </div>
+                            ) : null}
+
+                            {t.notes ? (
+                              <div className="text-sm text-zinc-300">
+                                <div className="text-xs font-medium text-zinc-500">Notes</div>
+                                <div className="mt-1 whitespace-pre-wrap">{t.notes}</div>
+                              </div>
+                            ) : null}
+
+                            {date ? (
+                              <div className="text-sm text-zinc-300">
+                                <span className="text-xs font-medium text-zinc-500">Email sent:</span>{' '}
+                                {date}
+                              </div>
+                            ) : null}
+
+                            {inboxHref ? (
+                              <a
+                                href={inboxHref}
+                                className="inline-block text-sm text-zinc-200 underline underline-offset-4 hover:text-white"
+                              >
+                                View email →
+                              </a>
+                            ) : null}
+
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {columns
+                                .filter((c) => c.id !== current)
+                                .map((c) => (
+                                  <button
+                                    key={c.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void move(t.id, c.id);
+                                    }}
+                                    className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                                    disabled={loading}
+                                  >
+                                    Move to {c.title}
+                                  </button>
+                                ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : null}
                   </div>
