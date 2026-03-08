@@ -201,10 +201,13 @@ export async function POST(req: Request) {
         const summaryText = emailText || emailRaw;
         const summary = summaryText ? summaryText.slice(0, 500) : null;
 
-        const ts = m.ts ?? m.inserted_at ?? null;
+        // `ts` is Unix epoch seconds (float) from agentmail; multiply by 1000 for JS Date.
+        // Fall back to `inserted_at` (ISO string) if ts missing.
         let sourceEmailDate: string | null = null;
-        if (ts) {
-          try { sourceEmailDate = new Date(String(ts)).toISOString(); } catch { sourceEmailDate = null; }
+        if (m.ts != null) {
+          try { sourceEmailDate = new Date(Number(m.ts) * 1000).toISOString(); } catch { sourceEmailDate = null; }
+        } else if (m.inserted_at) {
+          try { sourceEmailDate = new Date(String(m.inserted_at)).toISOString(); } catch { sourceEmailDate = null; }
         }
 
         const taskPayload: Record<string, unknown> = {
