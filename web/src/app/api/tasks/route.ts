@@ -14,6 +14,12 @@ export async function GET() {
 
   const rows = (data ?? []) as Record<string, unknown>[];
 
+  // Normalize legacy statuses so clients never see triage/doing.
+  for (const r of rows) {
+    const s = String(r.status ?? '');
+    if (s === 'triage' || s === 'doing') r.status = 'todo';
+  }
+
   // best-effort sort by updated_at/created_at
   rows.sort((a, b) => {
     const at = a.updated_at ?? a.created_at;
