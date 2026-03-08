@@ -198,7 +198,12 @@ export async function POST(req: Request) {
 
         const emailText = String(m.text ?? '').trim();
         const summary = emailText ? emailText.slice(0, 500) : null;
-        const sourceEmailDate = m.ts ? new Date(String(m.ts)).toISOString() : null;
+        let sourceEmailDate: string | null = null;
+        if (m.ts != null) {
+          const n = Number(m.ts);
+          const d = !isNaN(n) && n > 1_000_000_000 ? new Date(n * 1000) : new Date(String(m.ts));
+          sourceEmailDate = isNaN(d.getTime()) ? null : d.toISOString();
+        }
 
         const taskPayload: Record<string, unknown> = {
           title,
