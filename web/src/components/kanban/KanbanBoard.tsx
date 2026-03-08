@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 type ColumnId = 'todo' | 'done';
 
@@ -147,24 +148,31 @@ export default function KanbanBoard() {
   }, []);
 
   // Support ?highlight=<taskId> from search: scroll + flash the card.
+  const searchParams = useSearchParams();
+  const highlightParam = searchParams?.get('highlight') ?? null;
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const hid = params.get('highlight');
-    if (!hid) return;
-    setHighlightId(hid);
+    if (!highlightParam) return;
+    setHighlightId(highlightParam);
     // Remove from URL without reload.
-    const url = new URL(window.location.href);
-    url.searchParams.delete('highlight');
-    window.history.replaceState({}, '', url.toString());
-    // Scroll after tasks load.
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('highlight');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [highlightParam]);
+
+  // Scroll to highlighted card once tasks are loaded.
+  useEffect(() => {
+    if (!highlightId) return;
     const t = setTimeout(() => {
-      const el = cardRefs.current[hid];
+      const el = cardRefs.current[highlightId];
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => setHighlightId(null), 2000);
+      const clear = setTimeout(() => setHighlightId(null), 2000);
+      return () => clearTimeout(clear);
     }, 400);
     return () => clearTimeout(t);
-  }, []);
+  }, [highlightId, tasks]);
 
   return (
     <div className="space-y-4">

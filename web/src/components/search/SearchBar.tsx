@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 type TaskTag = { name: string; category: string };
@@ -21,6 +22,7 @@ function statusBadge(status: string) {
 }
 
 export default function SearchBar({ onTaskSelect }: { onTaskSelect?: (taskId: string) => void }) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -68,8 +70,7 @@ export default function SearchBar({ onTaskSelect }: { onTaskSelect?: (taskId: st
     if (onTaskSelect) {
       onTaskSelect(id);
     } else {
-      // Navigate to home with highlight anchor.
-      window.location.href = `/?highlight=${encodeURIComponent(id)}`;
+      router.push(`/?highlight=${encodeURIComponent(id)}`);
     }
   }
 

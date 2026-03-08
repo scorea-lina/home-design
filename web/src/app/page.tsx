@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/search/SearchBar';
 
@@ -15,10 +16,14 @@ export default function KanbanHomePage() {
             Kanban-first landing. New extracted items land in <span className="text-zinc-200">To Do</span>.
           </p>
         </div>
-        <SearchBar />
+        <Suspense>
+          <SearchBar />
+        </Suspense>
       </header>
 
-      <KanbanBoard />
+      <Suspense>
+        <KanbanBoard />
+      </Suspense>
     </div>
   );
 }
