@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type ColumnId = 'todo' | 'done';
 
@@ -37,6 +37,8 @@ export default function KanbanBoard() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [archiveCount, setArchiveCount] = useState<number | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   async function refresh() {
     setLoading(true);
@@ -142,6 +144,26 @@ export default function KanbanBoard() {
 
   useEffect(() => {
     void refresh();
+  }, []);
+
+  // Support ?highlight=<taskId> from search: scroll + flash the card.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const hid = params.get('highlight');
+    if (!hid) return;
+    setHighlightId(hid);
+    // Remove from URL without reload.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('highlight');
+    window.history.replaceState({}, '', url.toString());
+    // Scroll after tasks load.
+    const t = setTimeout(() => {
+      const el = cardRefs.current[hid];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => setHighlightId(null), 2000);
+    }, 400);
+    return () => clearTimeout(t);
   }, []);
 
   return (
@@ -252,6 +274,7 @@ export default function KanbanBoard() {
                 return (
                   <div
                     key={t.id}
+                    ref={(el) => { cardRefs.current[t.id] = el; }}
                     role="button"
                     tabIndex={0}
                     onClick={() => setExpanded((p) => ({ ...p, [t.id]: !p[t.id] }))}
@@ -261,7 +284,11 @@ export default function KanbanBoard() {
                         setExpanded((p) => ({ ...p, [t.id]: !p[t.id] }));
                       }
                     }}
-                    className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:bg-zinc-900/60"
+                    className={`cursor-pointer rounded-lg border p-4 hover:bg-zinc-900/60 ${
+                      highlightId === t.id
+                        ? 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-400 ring-offset-1 ring-offset-black transition-all duration-700'
+                        : 'border-zinc-800 bg-zinc-900/40'
+                    }`}
                   >
                     {/* Collapsed header (always visible): title + tags + CTAs */}
                     <div className="flex items-start justify-between gap-3">
