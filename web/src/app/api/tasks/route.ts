@@ -69,16 +69,40 @@ export async function GET() {
 export async function POST(req: Request) {
   const supabase = getSupabaseServerClient();
 
-  const body = (await req.json().catch(() => ({}))) as { title?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    title?: string;
+    notes?: string;
+    tags?: string[]; // array of tag IDs
+  };
   const title = (body.title ?? '').trim();
   if (!title) {
     return NextResponse.json({ ok: false, error: 'Missing title' }, { status: 400 });
   }
 
-  const { error } = await supabase.from('tasks').insert({ title, status: 'todo' });
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  const notes = (body.notes ?? '').trim() || null;
+
+  const { data: inserted, error } = await supabase
+    .from('tasks')
+    .insert({ title, status: 'todo', notes })
+    .select('id')
+    .single();
+
+  if (error || !inserted) {
+    return NextResponse.json({ ok: false, error: error?.message ?? 'Insert failed' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Insert tag assignments if tag IDs were provided.
+  const tagIds = (body.tags ?? []).filter(Boolean);
+  if (tagIds.length) {
+    const rows = tagIds.map((tag_id: string) => ({
+      tag_id,
+      target_type: 'task',
+      target_id: inserted.id,
+      confidence: 'manual',
+    }));
+    // Ignore conflicts (idempotent).
+    await supabase.from('tag_assignments').upsert(rows, { onConflict: 'tag_id,target_type,target_id' });
+  }
+
+  return NextResponse.json({ ok: true, id: inserted.id });
 }
