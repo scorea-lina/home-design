@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-type ColumnId = 'open' | 'done';
+type ColumnId = 'todo' | 'done';
 
-type RawStatus = 'open' | 'done' | 'triage' | 'todo' | 'doing' | (string & {});
+type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
 
 type Task = {
   id: string;
@@ -16,12 +16,12 @@ type Task = {
 
 function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
   if (status === 'done') return 'done';
-  // Back-compat: collapse all non-done states into "open".
-  return 'open';
+  // Back-compat: collapse all non-done states into "todo".
+  return 'todo';
 }
 
 const columns: { id: ColumnId; title: string }[] = [
-  { id: 'open', title: 'To Do' },
+  { id: 'todo', title: 'To Do' },
   { id: 'done', title: 'Done' },
 ];
 
@@ -86,7 +86,7 @@ export default function KanbanBoard() {
   }
 
   const grouped = useMemo(() => {
-    const g: Record<ColumnId, Task[]> = { open: [], done: [] };
+    const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
     for (const t of tasks) {
       g[normalizeStatus(t.status)].push(t);
     }

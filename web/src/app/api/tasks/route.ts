@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Missing title' }, { status: 400 });
   }
 
-  const { error } = await supabase.from('tasks').insert({ title, status: 'open' });
+  const { error } = await supabase.from('tasks').insert({ title, status: 'todo' });
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }

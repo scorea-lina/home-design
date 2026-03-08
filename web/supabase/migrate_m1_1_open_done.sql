@@ -1,12 +1,12 @@
--- M1.1 — Simplify Kanban statuses to: open | done
+-- M1.1 — Simplify Kanban columns to: To Do | Done
 --
--- Requirement: migrate any status in ('triage','doing') -> 'open'
--- NOTE: we also include 'todo' -> 'open' for safety so no tasks disappear.
+-- DB status normalization (no schema change):
+-- Requirement: migrate any status in ('triage','doing') -> 'todo'
 
 begin;
 
 update public.tasks
-set status = 'open'
-where status in ('triage', 'todo', 'doing');
+set status = 'todo'
+where status in ('triage', 'doing');
 
 commit;

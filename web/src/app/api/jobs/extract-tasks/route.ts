@@ -193,9 +193,9 @@ export async function POST(req: Request) {
           existingStatus = exT?.status ?? null;
         }
 
-        // Canonical statuses are now: open | done.
-        // Preserve done if user marked it done; otherwise default to open.
-        const status = existingStatus === 'done' ? 'done' : 'open';
+        // Canonical statuses are now: todo | done.
+        // Preserve done if user marked it done; otherwise default to todo.
+        const status = existingStatus === 'done' ? 'done' : 'todo';
         const taskPayload: Record<string, unknown> = {
           title,
           status,
