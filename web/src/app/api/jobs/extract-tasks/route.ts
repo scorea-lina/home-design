@@ -193,13 +193,19 @@ export async function POST(req: Request) {
           existingStatus = exT?.status ?? null;
         }
 
-        // Canonical statuses are now: todo | done.
-        // Preserve done if user marked it done; otherwise default to todo.
+        // Canonical statuses are: todo | done. Preserve done if user marked it done.
         const status = existingStatus === 'done' ? 'done' : 'todo';
+
+        const emailText = String(m.text ?? '').trim();
+        const summary = emailText ? emailText.slice(0, 500) : null;
+        const sourceEmailDate = m.ts ? new Date(String(m.ts)).toISOString() : null;
+
         const taskPayload: Record<string, unknown> = {
           title,
           status,
           source_message_id: messageId,
+          source_email_date: sourceEmailDate,
+          summary,
           notes: draft.notes ?? null,
           updated_at: new Date().toISOString(),
         };
