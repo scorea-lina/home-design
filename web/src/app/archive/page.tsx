@@ -35,6 +35,19 @@ export default function ArchivePage() {
   const [restoring, setRestoring] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [tagFilter, setTagFilter] = useState<string>('');
+  const [allTagNames, setAllTagNames] = useState<string[]>([]);
+
+  async function loadTags() {
+    try {
+      const res = await fetch('/api/tags', { cache: 'no-store' });
+      const json = (await res.json()) as { ok: boolean; tags?: Array<{ name: string }>; error?: string };
+      if (!res.ok || !json.ok) return;
+      const names = Array.from(new Set((json.tags ?? []).map((t) => String(t.name ?? '')).filter(Boolean))).sort();
+      setAllTagNames(names);
+    } catch {
+      // ignore
+    }
+  }
 
   async function loadArchive() {
     setLoading(true);
@@ -72,6 +85,7 @@ export default function ArchivePage() {
 
   useEffect(() => {
     void loadArchive();
+    void loadTags();
   }, []);
 
   const availableTags = Array.from(
@@ -131,7 +145,7 @@ export default function ArchivePage() {
           className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
         >
           <option value="">All tags</option>
-          {availableTags.map((t) => (
+          {allTagNames.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
