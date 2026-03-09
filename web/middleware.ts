@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Exclude the extraction endpoint (already gated by x-jobs-secret)
-const EXCLUDED = ['/api/jobs/extract-tasks'];
+const EXCLUDED = ['/api/jobs/extract-tasks', '/api/jobs/ingest-agentmail'];
 
 export function middleware(req: NextRequest) {
   const sitePassword = process.env.SITE_PASSWORD;
