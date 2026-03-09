@@ -170,37 +170,21 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // On reprocess: wipe existing tasks for this message so we can re-insert cleanly.
-      if (reprocess) {
-        const { data: existingTasks } = await supabase
-          .from('tasks')
-          .select('id')
-          .eq('source_message_id', messageId);
-        const existingIds = ((existingTasks ?? []) as { id: string }[]).map((t) => t.id);
-        if (existingIds.length) {
-          // Delete tag_assignments first (no FK cascade), then tasks.
-          await supabase.from('tag_assignments').delete().in('target_id', existingIds);
-          await supabase.from('tasks').delete().eq('source_message_id', messageId);
-        }
-      }
-
       const debugTaskEntries: (typeof debug.samples)[0]['tasks'] = [];
 
       for (const draft of taskDrafts) {
         const title = draft.title || String(m.subject ?? '(no subject)');
 
-        // Check for existing task (non-reprocess path) to preserve status.
-        let existingStatus: string | null = null;
-        if (!reprocess) {
-          const { data: ex } = await supabase
-            .from('tasks')
-            .select('id, status')
-            .eq('source_message_id', messageId)
-            .eq('title', title)
-            .maybeSingle();
-          const exT = ex as null | { id?: string; status?: string };
-          existingStatus = exT?.status ?? null;
-        }
+        // Check for existing task to preserve status + avoid deleting user edits/tags.
+        const { data: ex } = await supabase
+          .from('tasks')
+          .select('id, status')
+          .eq('source_message_id', messageId)
+          .eq('title', title)
+          .maybeSingle();
+        const exT = ex as null | { id?: string; status?: string };
+        const existingTaskId = exT?.id ?? null;
+        const existingStatus = exT?.status ?? null;
 
         // Canonical statuses are: todo | done. Preserve done if user marked it done.
         const status = existingStatus === 'done' ? 'done' : 'todo';
@@ -224,17 +208,26 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         };
 
-        const { data: taskRow, error: taskErr } = await supabase
-          .from('tasks')
-          .insert(taskPayload)
-          .select('id')
-          .maybeSingle();
+        let taskId: string | null = existingTaskId;
+        if (existingTaskId) {
+          const { error: upErr } = await supabase.from('tasks').update(taskPayload).eq('id', existingTaskId);
+          if (upErr) {
+            return NextResponse.json({ ok: false, error: upErr.message }, { status: 500 });
+          }
+          updated++;
+        } else {
+          const { data: taskRow, error: taskErr } = await supabase
+            .from('tasks')
+            .insert(taskPayload)
+            .select('id')
+            .maybeSingle();
 
-        if (taskErr) {
-          return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
+          if (taskErr) {
+            return NextResponse.json({ ok: false, error: taskErr.message }, { status: 500 });
+          }
+          taskId = (taskRow as null | { id?: string })?.id ?? null;
+          created++;
         }
-        const taskId = (taskRow as null | { id?: string })?.id ?? null;
-        created++;
 
         // Assign tags.
         if (taskId) {
@@ -244,7 +237,9 @@ export async function POST(req: Request) {
             const rows = toAssign.map((t) => ({
               tag_id: t.id, target_type: 'task', target_id: taskId, confidence,
             }));
-            const { error: tagErr } = await supabase.from('tag_assignments').insert(rows);
+            const { error: tagErr } = await supabase
+              .from('tag_assignments')
+              .upsert(rows, { onConflict: 'tag_id,target_type,target_id' });
             if (tagErr) console.warn('tag assignment insert failed', tagErr.message);
           }
           debugTaskEntries.push({
@@ -255,9 +250,6 @@ export async function POST(req: Request) {
           });
         }
       }
-
-      // Increment updated count when previously processed (reprocess path deleted + re-created).
-      if (reprocess) { updated++; created -= taskDrafts.length; }
 
       if (debug.enabled && debug.samples.length < 3) {
         debug.samples.push({
