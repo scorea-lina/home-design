@@ -9,7 +9,12 @@ export const dynamic = 'force-dynamic';
 const EXTRACTOR_VERSION = `openai-v1-multi-${process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'}`;
 
 function requireJobSecret(req: Request) {
-  // Accept Vercel cron bearer token (CRON_SECRET) — Vercel injects this automatically.
+  // Accept Vercel Cron (scheduled) invocations.
+  // Vercel Cron sends `x-vercel-cron: 1`.
+  // Note: this header can be spoofed; we treat these endpoints as safe/idempotent.
+  if (req.headers.get('x-vercel-cron') === '1') return;
+
+  // Accept CRON_SECRET bearer for manual triggers.
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
     const authHeader = req.headers.get('authorization') ?? '';
@@ -26,6 +31,10 @@ function requireJobSecret(req: Request) {
   if (!got || got !== configured) {
     throw new Error('Unauthorized: missing/invalid x-jobs-secret');
   }
+}
+
+export async function GET(req: Request) {
+  return POST(req);
 }
 
 export async function POST(req: Request) {
