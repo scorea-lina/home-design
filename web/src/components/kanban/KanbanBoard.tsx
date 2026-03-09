@@ -411,7 +411,7 @@ export default function KanbanBoard() {
                       </div>
 
                       <div className="flex shrink-0 flex-col gap-2">
-                        <button
+                                                <button
                           onClick={(e) => {
                             e.stopPropagation();
                             void patchStatus(t.id, 'done');
@@ -421,6 +421,20 @@ export default function KanbanBoard() {
                         >
                           Mark as Done
                         </button>
+                        {current === 'done' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void patchStatus(t.id, 'todo');
+                            }}
+                            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                            disabled={loading}
+                          >
+                            Revert
+                          </button>
+                        ) : null}
+
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -561,6 +575,7 @@ export default function KanbanBoard() {
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
         </a>
       </div>
+
     </div>
   );
 }
