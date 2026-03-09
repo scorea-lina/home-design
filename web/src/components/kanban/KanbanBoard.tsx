@@ -17,6 +17,7 @@ type Task = {
   source_message_id?: string | null;
   summary?: string | null;
   source_email_date?: string | null;
+  source_message_ts?: number | null;
   notes?: string | null;
   position?: number | null;
   created_at?: string | null;

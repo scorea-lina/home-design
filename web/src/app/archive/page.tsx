@@ -10,6 +10,7 @@ type ArchivedTask = {
   summary?: string | null;
   source_message_id?: string | null;
   source_email_date?: string | null;
+  source_message_ts?: number | null;
   archived_at?: string | null;
   notes?: string | null;
   tags?: TaskTag[];
@@ -135,6 +136,12 @@ export default function ArchivePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="text-base font-medium text-zinc-100">{t.title}</div>
+
+                          {t.source_message_ts != null ? (
+                            <div className="mt-1 text-xs text-zinc-500">
+                              Email: {new Date(Number(t.source_message_ts) * 1000).toLocaleString()}
+                            </div>
+                          ) : null}
 
                           {tags.length ? (
                             <div className="mt-2 flex flex-wrap gap-1.5">
