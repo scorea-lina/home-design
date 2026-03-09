@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/jobs/dedupe-tasks",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/jobs/extract-tasks",
       "schedule": "10 * * * *"
     },
