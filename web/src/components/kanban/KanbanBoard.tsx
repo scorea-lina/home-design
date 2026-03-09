@@ -26,11 +26,13 @@ type Task = {
 
 function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
   if (status === 'done') return 'done';
+  if (status === 'resolved') return 'resolved';
   return 'todo';
 }
 
 const columns: { id: ColumnId; title: string }[] = [
   { id: 'todo', title: 'To Do' },
+  { id: 'resolved', title: 'Resolved' },
   { id: 'done', title: 'Done' },
 ];
 
