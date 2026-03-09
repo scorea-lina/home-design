@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import NewTaskModal from './NewTaskModal';
 
-type ColumnId = 'todo' | 'done';
+type ColumnId = 'todo' | 'done' | 'resolved';
 
 type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
 
@@ -51,6 +51,8 @@ export default function KanbanBoard() {
   const [editSaving, setEditSaving] = useState(false);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
+  const [undo, setUndo] = useState<null | { taskId: string; prevStatus: ColumnId }>(null);
+  const undoTimerRef = useRef<number | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -94,7 +96,7 @@ export default function KanbanBoard() {
     }
   }
 
-  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived') {
+  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived' | 'resolved') {
     const prev = tasks;
 
     // Optimistic UI
@@ -125,6 +127,12 @@ export default function KanbanBoard() {
 
   async function move(taskId: string, to: ColumnId) {
     await patchStatus(taskId, to);
+  }
+
+  function showUndo(taskId: string, prevStatus: ColumnId) {
+    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+    setUndo({ taskId, prevStatus });
+    undoTimerRef.current = window.setTimeout(() => setUndo(null), 8000);
   }
 
   async function reorderTodo(draggedId: string, targetId: string) {
@@ -196,7 +204,7 @@ export default function KanbanBoard() {
   }, [tasks, activeFilters]);
 
   const grouped = useMemo(() => {
-    const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
+    const g: Record<ColumnId, Task[]> = { todo: [], resolved: [], done: [] };
     for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }

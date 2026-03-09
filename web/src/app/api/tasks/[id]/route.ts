@@ -41,10 +41,10 @@ export async function PATCH(
   // Apply status update if provided.
   if (body.status !== undefined) {
     const status = body.status;
-    if (!['todo', 'done', 'archived', 'triage', 'doing'].includes(status)) {
+    if (!['todo', 'done', 'archived', 'resolved', 'triage', 'doing'].includes(status)) {
       return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
     }
-    const normalized = status === 'archived' ? 'archived' : status === 'done' ? 'done' : 'todo';
+    const normalized = status === 'archived' ? 'archived' : status === 'resolved' ? 'resolved' : status === 'done' ? 'done' : 'todo';
     patch.status = normalized;
     patch.archived_at = normalized === 'archived' ? new Date().toISOString() : null;
   }
