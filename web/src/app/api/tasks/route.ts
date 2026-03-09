@@ -48,6 +48,33 @@ export async function GET() {
     (r as any).tags = tagsByTaskId[tid] ?? [];
   }
 
+
+  // Add source message sent timestamp from agentmail_messages.ts (epoch seconds).
+  // This avoids a tasks table migration and automatically backfills for existing tasks.
+  const messageIds = Array.from(
+    new Set(rows.map((r) => String((r as any).source_message_id ?? '')).filter(Boolean))
+  );
+  const tsByMessageId: Record<string, number> = {};
+  if (messageIds.length) {
+    const { data: msgs, error: msgErr } = await supabase
+      .from('agentmail_messages')
+      .select('message_id, ts')
+      .in('message_id', messageIds);
+    if (!msgErr && msgs) {
+      for (const m of msgs as any[]) {
+        const mid = String(m.message_id ?? '');
+        const ts = m.ts;
+        if (!mid || ts == null) continue;
+        const n = Number(ts);
+        if (!isNaN(n)) tsByMessageId[mid] = n;
+      }
+    }
+  }
+  for (const r of rows) {
+    const mid = String((r as any).source_message_id ?? '');
+    (r as any).source_message_ts = mid && tsByMessageId[mid] != null ? tsByMessageId[mid] : null;
+  }
+
   // Normalize legacy statuses so clients never see triage/doing.
   for (const r of rows) {
     const s = String(r.status ?? '');
