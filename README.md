@@ -72,4 +72,4 @@ Then refresh `/` — new cards should appear in **Triage**.
 > Note: DB files are gitignored; `data/` itself is tracked.
 
 ## Operating rules
-- See `docs/OPERATING.md` for EngineerBot\x27s operating protocol (QA flow + 20-min update cadence).
+- See `docs/OPERATING.md` for EngineerBot's operating protocol (QA flow + 20-min update cadence).
