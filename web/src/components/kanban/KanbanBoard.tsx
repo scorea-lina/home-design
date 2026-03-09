@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import NewTaskModal from './NewTaskModal';
 
-type ColumnId = 'todo' | 'done' | 'resolved';
+type ColumnId = 'todo' | 'done';
 
 type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
 
@@ -26,13 +26,11 @@ type Task = {
 
 function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
   if (status === 'done') return 'done';
-  if (status === 'resolved') return 'resolved';
   return 'todo';
 }
 
 const columns: { id: ColumnId; title: string }[] = [
   { id: 'todo', title: 'To Do' },
-  { id: 'resolved', title: 'Resolved' },
   { id: 'done', title: 'Done' },
 ];
 
@@ -53,8 +51,6 @@ export default function KanbanBoard() {
   const [editSaving, setEditSaving] = useState(false);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
-  const [undo, setUndo] = useState<null | { taskId: string; prevStatus: ColumnId }>(null);
-  const undoTimerRef = useRef<number | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -98,7 +94,7 @@ export default function KanbanBoard() {
     }
   }
 
-  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived' | 'resolved') {
+  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived') {
     const prev = tasks;
 
     // Optimistic UI
@@ -129,12 +125,6 @@ export default function KanbanBoard() {
 
   async function move(taskId: string, to: ColumnId) {
     await patchStatus(taskId, to);
-  }
-
-  function showUndo(taskId: string, prevStatus: ColumnId) {
-    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
-    setUndo({ taskId, prevStatus });
-    undoTimerRef.current = window.setTimeout(() => setUndo(null), 8000);
   }
 
   async function reorderTodo(draggedId: string, targetId: string) {
@@ -206,7 +196,7 @@ export default function KanbanBoard() {
   }, [tasks, activeFilters]);
 
   const grouped = useMemo(() => {
-    const g: Record<ColumnId, Task[]> = { todo: [], resolved: [], done: [] };
+    const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
     for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }
@@ -337,7 +327,7 @@ export default function KanbanBoard() {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {columns.map((col) => (
           <div key={col.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -421,23 +411,7 @@ export default function KanbanBoard() {
                       </div>
 
                       <div className="flex shrink-0 flex-col gap-2">
-                        {current === 'todo' ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Optimistic move + show Undo
-                              setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, status: 'resolved' } : tk)));
-                              showUndo(t.id, 'todo');
-                              void patchStatus(t.id, 'resolved');
-                            }}
-                            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-                            disabled={loading}
-                          >
-                            Resolve
-                          </button>
-                        ) : null}
-
-                        <button
+                                                <button
                           onClick={(e) => {
                             e.stopPropagation();
                             void patchStatus(t.id, 'done');
@@ -447,6 +421,20 @@ export default function KanbanBoard() {
                         >
                           Mark as Done
                         </button>
+                        {current === 'done' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void patchStatus(t.id, 'todo');
+                            }}
+                            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                            disabled={loading}
+                          >
+                            Revert
+                          </button>
+                        ) : null}
+
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -587,25 +575,6 @@ export default function KanbanBoard() {
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
         </a>
       </div>
-
-      {undo ? (
-        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm text-zinc-200 shadow-lg" role="status">
-          <span className="mr-3">Task resolved.</span>
-          <button
-            className="underline underline-offset-4 hover:text-white"
-            onClick={() => {
-              const u = undo;
-              setUndo(null);
-              if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
-              // Optimistic revert
-              setTasks((ts) => ts.map((tk) => (tk.id === u.taskId ? { ...tk, status: u.prevStatus } : tk)));
-              void patchStatus(u.taskId, u.prevStatus);
-            }}
-          >
-            Undo
-          </button>
-        </div>
-      ) : null}
 
     </div>
   );
