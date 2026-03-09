@@ -335,7 +335,7 @@ export default function KanbanBoard() {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {columns.map((col) => (
           <div key={col.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
