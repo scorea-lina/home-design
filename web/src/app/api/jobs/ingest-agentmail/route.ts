@@ -20,6 +20,10 @@ type AgentmailMessage = Record<string, unknown> & {
 };
 
 function requireJobSecret(req: Request) {
+  // Accept Vercel Cron (scheduled) invocations.
+  if (req.headers.get('x-vercel-cron') === '1') return;
+
+  // Accept CRON_SECRET bearer for manual triggers.
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
     const authHeader = req.headers.get('authorization') ?? '';
@@ -102,6 +106,10 @@ function normalizeRow(inboxAddress: string, inboxId: string, threadId: string, m
     text: (msg as any).text ?? (msg as any).extracted_text ?? (msg as any).preview ?? null,
     raw: msg,
   };
+}
+
+export async function GET(req: Request) {
+  return POST(req);
 }
 
 export async function POST(req: Request) {
