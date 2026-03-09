@@ -13,6 +13,7 @@ export async function GET() {
     .from('tasks')
     .select('id,title,status,source_message_id,summary,source_email_date,notes,position,created_at,updated_at')
     .neq('status', 'archived')
+    .not('title', 'ilike', '⛔ Duplicate:%')
     .limit(200);
 
   if (error) {
