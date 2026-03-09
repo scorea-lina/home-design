@@ -421,6 +421,22 @@ export default function KanbanBoard() {
                       </div>
 
                       <div className="flex shrink-0 flex-col gap-2">
+                        {current === 'todo' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Optimistic move + show Undo
+                              setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, status: 'resolved' } : tk)));
+                              showUndo(t.id, 'todo');
+                              void patchStatus(t.id, 'resolved');
+                            }}
+                            className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                            disabled={loading}
+                          >
+                            Resolve
+                          </button>
+                        ) : null}
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -571,6 +587,26 @@ export default function KanbanBoard() {
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
         </a>
       </div>
+
+      {undo ? (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-zinc-700 bg-zinc-950 px-4 py-2 text-sm text-zinc-200 shadow-lg" role="status">
+          <span className="mr-3">Task resolved.</span>
+          <button
+            className="underline underline-offset-4 hover:text-white"
+            onClick={() => {
+              const u = undo;
+              setUndo(null);
+              if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+              // Optimistic revert
+              setTasks((ts) => ts.map((tk) => (tk.id === u.taskId ? { ...tk, status: u.prevStatus } : tk)));
+              void patchStatus(u.taskId, u.prevStatus);
+            }}
+          >
+            Undo
+          </button>
+        </div>
+      ) : null}
+
     </div>
   );
 }
