@@ -206,9 +206,24 @@ export default function KanbanBoard() {
     // - To Do: position ASC (null last)
     // - Done: updated_at/created_at DESC
     g.todo.sort((a, b) => {
-      const ap = a.position != null ? Number(a.position) : Infinity;
-      const bp = b.position != null ? Number(b.position) : Infinity;
-      return ap - bp;
+      const at = a.source_message_ts != null
+        ? Number(a.source_message_ts)
+        : a.source_email_date
+          ? +new Date(String(a.source_email_date)) / 1000
+          : (a.updated_at ?? a.created_at)
+            ? +new Date(String(a.updated_at ?? a.created_at)) / 1000
+            : 0;
+      const bt = b.source_message_ts != null
+        ? Number(b.source_message_ts)
+        : b.source_email_date
+          ? +new Date(String(b.source_email_date)) / 1000
+          : (b.updated_at ?? b.created_at)
+            ? +new Date(String(b.updated_at ?? b.created_at)) / 1000
+            : 0;
+      if (bt !== at) return bt - at; // newest first
+      const aid = String(a.id ?? '');
+      const bid = String(b.id ?? '');
+      return bid.localeCompare(aid);
     });
     g.done.sort((a, b) => {
       const at = a.updated_at ?? a.created_at;
@@ -397,6 +412,15 @@ export default function KanbanBoard() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-base font-medium text-zinc-100">{t.title}</div>
+                        {t.source_message_ts != null ? (
+                          <div className="mt-1 text-xs text-zinc-500">
+                            Email: {new Date(Number(t.source_message_ts) * 1000).toLocaleString()}
+                          </div>
+                        ) : t.source_email_date ? (
+                          <div className="mt-1 text-xs text-zinc-500">
+                            Email: {new Date(String(t.source_email_date)).toLocaleString()}
+                          </div>
+                        ) : null}
                         {tags.length ? (
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {tags.map((tag) => (
