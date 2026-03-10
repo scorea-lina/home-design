@@ -17,6 +17,29 @@ Non-goals (v1):
 
 ---
 
+## 0.1) Scope update (vNext) — Keep Kanban/Inbox, replace other tabs with Links + Images
+
+**Hard constraints:**
+- **Keep the Kanban tab and Inbox tab EXACTLY as they are. Do not touch or change those.**
+
+**Remove / do not build out:**
+- Search tab
+- Transcripts tab
+- Canvas tab
+- Settings tab
+
+**Build instead:**
+- **Links tab** — Pinterest-like board of link cards extracted from emails, with metadata, tags, notes, filtering, and an above-the-fold “View Archived” entrypoint to an archived view.
+- **Images tab** — Pinterest-like board of images from emails + uploads, with clone+markup workflow and threading of edited clones to originals.
+
+**Tagging (vNext):**
+- There is **one global tag set**.
+- Tags are **task-level** as the source of truth (clear + already working).
+- Links/Images should **adopt tags from tasks** (and allow manual add/remove).
+- New tags are created **only manually** by the user (no automatic tag creation).
+
+---
+
 ## 1) Users & Roles
 
 ### 1.1 People map (canonical)
@@ -219,63 +242,42 @@ Seed with Veronica’s list, plus required topic tags.
 
 ## 6) UI / UX (screens)
 
-### 6.1 Global layout
-- Left nav: Inbox / Meetings / Attachments / Canvas / To-Dos / Tags / Settings
-- Global search bar (Google-like)
+### 6.1 Global layout (vNext)
+- Left nav: **Inbox / To-Dos (Kanban) / Links / Images**
+- Remove from nav: Search / Transcripts / Canvas / Settings
 
 ### 6.2 Inbox (Paper Trail)
-- Timeline list of SourceEmails
-- Each item shows: subject, participants, date, key tags, attachment count, extracted to-dos count
-- Email detail:
-  - header + body + chunks
-  - inline tag editor (multi-tag)
-  - attachments panel
-  - “Create To-Do”
-  - “Extracted To-Dos” list with edit/accept
+- **Frozen: keep exactly as-is** (per scope update)
 
-### 6.3 Meetings
-- List view by meeting_date descending
-- Meeting detail:
-  - meeting metadata (title/date)
-  - transcript chunks
-  - tag editor (area tags apply here)
-  - extracted to-dos
-  - optional speaker dropdown per chunk
+### 6.3 Links (Pinterest-like)
+- Board of link cards extracted from emails
+- Each link → its own card
+- Card shows:
+  - short summary
+  - clickable link (opens new tab)
+  - tags (derived from related task tags)
+  - OpenGraph preview if available
+  - email sent datetime
+  - notes (manual)
+- Filtering: by tags
+- Sorting: newest → oldest by email sent datetime (top-left newest)
+- Archive:
+  - Above the fold: **“View Archived”** link
+  - Separate archived view/page
 
-### 6.4 Search
-- Single search input
-- Results grouped by type: Emails / Meetings / Attachments / Markups / To-Dos
-- Filters: tag, person, date range, type
-- Clicking a result opens the source at the relevant chunk
-
-### 6.5 Attachments
-- Gallery/table
-- Preview PDFs/images
-- Actions:
-  - “Open in Canvas”
-  - “Create Snippet”
-
-### 6.6 Canvas (Crop + Markup)
-Flow:
-1) Open PDF/image
-2) Select crop region (for PDFs: page + crop rect)
-3) Create snippet → opens markup editor
-4) Markup tools:
-   - pen/highlighter
-   - arrows, rectangles, circles, lines
-   - text boxes
-   - layers
-   - undo/redo
-   - comments attached to markup
-5) Save = creates **MarkupArtifact vN**
-6) Export:
-   - **Copy image to clipboard** (required)
-7) Tagging:
-   - Apply same multi-tags
-   - Link back to source attachment + page
-
-Versioning:
-- Each save increments version: v1, v2, v3…
+### 6.4 Images (Pinterest-like)
+- Board of images associated with the project
+- Sources:
+  - Email inline + attachments (dedupe only when confidently identical)
+  - User uploads (images + PDFs + Slides converted to images)
+- Clicking image opens a detail surface with:
+  - original image
+  - threaded clone list
+  - **Clone** button
+  - markup tools (arrows/lines/shapes/text) producing flattened saved clones
+- Tagging:
+  - Email-sourced images adopt tags from related tasks
+  - Upload-sourced images can be tagged manually (and can create new tags)
 
 ### 6.7 To-Dos (Kanban)
 - Columns: Open | Resolved | (Archived hidden by default)
