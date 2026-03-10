@@ -34,6 +34,21 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const [tagFilter, setTagFilter] = useState<string>('');
+  const [allTagNames, setAllTagNames] = useState<string[]>([]);
+
+  async function loadTags() {
+    try {
+      const res = await fetch('/api/tags', { cache: 'no-store' });
+      const json = (await res.json()) as { ok: boolean; tags?: Array<{ name: string }>; error?: string };
+      if (!res.ok || !json.ok) return;
+      const names = Array.from(new Set((json.tags ?? []).map((t) => String(t.name ?? '')).filter(Boolean))).sort();
+      setAllTagNames(names);
+    } catch {
+      // ignore
+    }
+  }
 
   async function loadArchive() {
     setLoading(true);
@@ -71,12 +86,27 @@ export default function ArchivePage() {
 
   useEffect(() => {
     void loadArchive();
+    void loadTags();
   }, []);
+
+  const availableTags = Array.from(
+    new Set(tasks.flatMap((t) => (t.tags ?? []).map((tg) => tg.name)).filter(Boolean))
+  ).sort();
+
+  const filteredTasks = tasks.filter((t) => {
+    const qq = q.trim().toLowerCase();
+    if (qq && !String(t.title ?? '').toLowerCase().includes(qq)) return false;
+    if (tagFilter) {
+      const names = new Set((t.tags ?? []).map((tg) => tg.name));
+      if (!names.has(tagFilter)) return false;
+    }
+    return true;
+  });
 
   // Group by day of archived_at.
   const groups: { day: string; tasks: ArchivedTask[] }[] = [];
   const seen: Record<string, number> = {};
-  for (const t of tasks) {
+  for (const t of filteredTasks) {
     const day = dayKey(t.archived_at);
     if (seen[day] === undefined) {
       seen[day] = groups.length;
@@ -102,6 +132,34 @@ export default function ArchivePage() {
         </a>
       </header>
 
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search archived tasks…"
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 md:w-[360px]"
+        />
+        <select
+          value={tagFilter}
+          onChange={(e) => setTagFilter(e.target.value)}
+          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+        >
+          <option value="">All tags</option>
+          {allTagNames.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        {(q || tagFilter) ? (
+          <button
+            onClick={() => { setQ(''); setTagFilter(''); }}
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+
       {error ? (
         <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
           {error}
@@ -110,9 +168,9 @@ export default function ArchivePage() {
 
       {loading ? (
         <div className="text-sm text-zinc-500">Loading archive…</div>
-      ) : tasks.length === 0 ? (
+      ) : filteredTasks.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
-          Nothing archived yet.
+          No archived tasks match your filters.
         </div>
       ) : (
         <div className="space-y-8">
