@@ -1,5 +1,3 @@
-export const dynamic = force-dynamic;
-
 export default function ImagesPage() {
   return (
     <div className="space-y-4">
