@@ -39,6 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="mb-1 text-xs font-medium text-zinc-400">Primary</div>
                 <NavLink href="/">Kanban</NavLink>
                 <NavLink href="/inbox">Inbox</NavLink>
+                <NavLink href="/links">Links</NavLink>
+                <NavLink href="/images">Images</NavLink>
+                <NavLink href="/archive">Archive</NavLink>
               </div>
 
               <div className="grid gap-1">
