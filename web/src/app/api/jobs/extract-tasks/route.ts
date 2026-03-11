@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { extractTaskFromAgentmailMessage } from '@/lib/extractTask';
+import { extractLatestReplyWithFallback } from '@/lib/extractLatestReply';
 import { extractWithOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
@@ -111,6 +112,9 @@ export async function POST(req: Request) {
 
       const hasOpenAI = !!(process.env.OPENAI_API_KEY || process.env.HOMEDESIGN_OPENAI_API_KEY);
 
+      const fullEmailText = String(m.text ?? '').trim();
+      const latestReplyText = extractLatestReplyWithFallback(fullEmailText, { minNonWhitespaceChars: 40 });
+
       let actionable = true;
       let confidence: 'auto_high' | 'auto_low' = 'auto_low';
       type TaskDraft = { title: string; notes?: string; areas: string[]; topics: string[] };
@@ -121,7 +125,7 @@ export async function POST(req: Request) {
           subject: String(m.subject ?? ''),
           from: String(m.from ?? ''),
           to: String(m.to ?? ''),
-          text: String(m.text ?? ''),
+          text: latestReplyText,
           allowedAreas,
           allowedTopics,
         });
@@ -153,7 +157,7 @@ export async function POST(req: Request) {
         }
       } else {
         // Heuristic fallback (no OpenAI configured).
-        const extracted = extractTaskFromAgentmailMessage(m);
+        const extracted = extractTaskFromAgentmailMessage({ ...m, text: latestReplyText });
         if (extracted.skipReason) {
           actionable = false;
         } else {
@@ -189,8 +193,7 @@ export async function POST(req: Request) {
         // Canonical statuses are: todo | done. Preserve done if user marked it done.
         const status = existingStatus === 'done' ? 'done' : 'todo';
 
-        const emailText = String(m.text ?? '').trim();
-        const summary = emailText ? emailText.slice(0, 500) : null;
+        const summary = latestReplyText ? latestReplyText.slice(0, 500) : null;
         let sourceEmailDate: string | null = null;
         if (m.ts != null) {
           const n = Number(m.ts);
