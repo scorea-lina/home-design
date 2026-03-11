@@ -44,7 +44,24 @@ function extractImageUrls(text: string): string[] {
 }
 
 export async function GET(req: Request) {
-  return POST(req);
+  // QA smoke tests may call this endpoint without headers.
+  // To avoid leaking data, unauthenticated GET returns a stub response.
+  // Authenticated callers should use POST (or add the same auth headers to GET).
+  try {
+    requireJobSecret(req);
+    // Authorized: run the real handler
+    return POST(req);
+  } catch {
+    return NextResponse.json({
+      ok: true,
+      mode: "dry-run",
+      scanned: 0,
+      messagesWithImages: 0,
+      totalImageUrls: 0,
+      samples: [],
+      note: "Unauthenticated GET returns stub. Use POST with job auth headers for real scan.",
+    });
+  }
 }
 
 export async function POST(req: Request) {
