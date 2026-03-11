@@ -532,13 +532,6 @@ export default function KanbanBoard() {
                               }}
                             />
 
-                            {t.summary ? (
-                              <div className="text-sm text-zinc-300">
-                                <div className="text-xs font-medium text-zinc-500">Summary</div>
-                                <div className="mt-1 whitespace-pre-wrap">{t.summary}</div>
-                              </div>
-                            ) : null}
-
                             {t.notes ? (
                               <div className="text-sm text-zinc-300">
                                 <div className="text-xs font-medium text-zinc-500">Notes</div>
