@@ -32,6 +32,21 @@ function isAppleHost(hostname: string) {
   return h === "apple.com" || h.endsWith(".apple.com");
 }
 
+function extractSenderEmail(fromField: string): string {
+  const s = (fromField || "").trim();
+  // Handles: Name <email@domain> and plain email@domain
+  const m = s.match(/<([^>]+)>/);
+  const candidate = (m ? m[1] : s).trim();
+  const m2 = candidate.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return (m2 ? m2[0] : "").toLowerCase();
+}
+
+function isAllowedSender(email: string): boolean {
+  if (!email) return false;
+  if (email.endsWith("@paradisahomes.com")) return true;
+  return email === "zachkinloch@gmail.com" || email === "veronica.tong@gmail.com";
+}
+
 function extractHttpUrls(text: string): string[] {
   const out: string[] = [];
   const re = /(https?:\/\/[^\s<>")\]]+)/g;
@@ -71,7 +86,7 @@ export async function POST(req: Request) {
     // Pull latest messages (optionally backfill from sinceTs).
     let q = supabase
       .from("agentmail_messages")
-      .select("message_id, text, inserted_at, ts")
+      .select("message_id, from, text, inserted_at, ts")
       .order("inserted_at", { ascending: false })
       .limit(limit);
 
@@ -88,11 +103,19 @@ export async function POST(req: Request) {
     let scanned = 0;
     let found = 0;
     let upserted = 0;
+    let skippedSender = 0;
 
     for (const m of msgs ?? []) {
       const messageId = String((m as any).message_id ?? "").trim();
       if (!messageId) continue;
       scanned++;
+
+      const fromField = String((m as any).from ?? "");
+      const senderEmail = extractSenderEmail(fromField);
+      if (!isAllowedSender(senderEmail)) {
+        skippedSender++;
+        continue;
+      }
 
       const text = String((m as any).text ?? "");
       const urls = extractHttpUrls(text);
@@ -117,7 +140,7 @@ export async function POST(req: Request) {
       upserted += rows.length;
     }
 
-    return NextResponse.json({ ok: true, scanned, found, upserted });
+    return NextResponse.json({ ok: true, scanned, skippedSender, found, upserted });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 401 });
   }
