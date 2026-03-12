@@ -32,3 +32,6 @@
 - Org/project bot operating rules live in bot-charter:
   - https://github.com/scorea-lina/bot-charter
   - HomeDesign addendum: `projects/home-design.md`
+
+## Access (non-secret)
+- See `docs/ACCESS.md` for which systems are used and the CLI preflight checks.
