@@ -16,8 +16,14 @@ const ALLOWED_SENDERS = [
 ];
 const ALLOWED_SENDER_DOMAINS = ["paradisahomes.com"];
 
+/** Extract bare email from RFC "Name <email>" or plain "email" format. */
+function extractEmail(from: string): string {
+  const match = from.match(/<([^>]+)>/);
+  return (match ? match[1] : from).toLowerCase().trim();
+}
+
 function isAllowedSender(from: string): boolean {
-  const addr = from.toLowerCase().trim();
+  const addr = extractEmail(from);
   if (ALLOWED_SENDERS.includes(addr)) return true;
   const domain = addr.split("@")[1];
   return ALLOWED_SENDER_DOMAINS.includes(domain);
