@@ -49,15 +49,24 @@ export async function POST(req: Request) {
     requireJobSecret(req);
 
     const url = new URL(req.url);
-    const limit = Math.min(Number(url.searchParams.get("limit") ?? 50) || 50, 500);
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 200) || 200, 500);
+    const sinceTsRaw = url.searchParams.get("sinceTs");
+    const sinceTs = sinceTsRaw ? Number(sinceTsRaw) : null;
 
     const supabase = getSupabaseServerClient();
 
-    const { data: msgs, error: msgErr } = await supabase
+    // Pull latest messages (optionally backfill from sinceTs).
+    let q = supabase
       .from("agentmail_messages")
-      .select("message_id, text, inserted_at")
+      .select("message_id, text, inserted_at, ts")
       .order("inserted_at", { ascending: false })
       .limit(limit);
+
+    if (sinceTs != null && Number.isFinite(sinceTs)) {
+      q = q.gte("ts", sinceTs);
+    }
+
+    const { data: msgs, error: msgErr } = await q;
 
     if (msgErr) {
       return NextResponse.json({ ok: false, error: msgErr.message }, { status: 500 });
