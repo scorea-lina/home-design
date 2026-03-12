@@ -27,3 +27,8 @@
 - Never put `SUPABASE_SERVICE_ROLE_KEY` in client code.
 - Never paste secrets into Discord.
 - Use Vercel env vars for runtime secrets.
+
+## Process & bot behavior (external)
+- Org/project bot operating rules live in bot-charter:
+  - https://github.com/scorea-lina/bot-charter
+  - HomeDesign addendum: `projects/home-design.md`
