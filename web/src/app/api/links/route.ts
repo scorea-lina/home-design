@@ -4,6 +4,11 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
+function isAppleHost(hostname: string) {
+  const h = hostname.toLowerCase();
+  return h === "apple.com" || h.endsWith(".apple.com");
+}
+
 export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
@@ -19,7 +24,16 @@ export async function GET() {
       return NextResponse.json({ ok: true, links: [], warning: error.message }, { status: 200 });
     }
 
-    return NextResponse.json({ ok: true, links: data ?? [] });
+    const links = (data ?? []).filter((l: any) => {
+      try {
+        const host = new URL(String(l.url ?? "")).hostname;
+        return !isAppleHost(host);
+      } catch {
+        return true;
+      }
+    });
+
+    return NextResponse.json({ ok: true, links });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
