@@ -20,7 +20,8 @@ create index if not exists links_created_at_idx
 
 alter table public.links enable row level security;
 
-create policy if not exists "anon read links"
+drop policy if exists "anon read links" on public.links;
+create policy "anon read links"
   on public.links
   for select
   to anon
