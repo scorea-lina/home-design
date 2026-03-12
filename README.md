@@ -1,11 +1,11 @@
 # Home Design / Home Project Hub
 
-Prototype repo for the Paradisa Home Project Hub (local-first, Tailscale-only).
+HomeDesign: a Next.js + Supabase app for managing home projects (Kanban + Inbox + tags), with Vercel-owned ingest/extraction jobs.
 
 ## Quickstart (local)
 
 Requirements:
-- Node.js 20+ (works on the Mac mini)
+- Node.js 20+
 
 Happy path:
 
@@ -18,7 +18,7 @@ npm run dev
 ```
 
 Notes:
-- Kanban interactions are **in-memory** for the overnight prototype (state resets on refresh).
+- Kanban and Inbox are backed by Supabase.
 
 ## Quickstart ("deployed-ish" via Docker) (optional)
 
