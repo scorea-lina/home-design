@@ -9,6 +9,20 @@ function isAppleHost(hostname: string) {
   return h === "apple.com" || h.endsWith(".apple.com");
 }
 
+/** Only show links extracted from emails sent by these addresses/domains. */
+const ALLOWED_SENDERS = [
+  "zachkinloch@gmail.com",
+  "veronica.tong@gmail.com",
+];
+const ALLOWED_SENDER_DOMAINS = ["paradisahomes.com"];
+
+function isAllowedSender(from: string): boolean {
+  const addr = from.toLowerCase().trim();
+  if (ALLOWED_SENDERS.includes(addr)) return true;
+  const domain = addr.split("@")[1];
+  return ALLOWED_SENDER_DOMAINS.includes(domain);
+}
+
 export async function GET() {
   try {
     const supabase = getSupabaseServerClient();
@@ -17,14 +31,39 @@ export async function GET() {
       .from("links")
       .select("id, source_message_id, url, title, description, created_at")
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(500);
 
     // If migration isn't applied yet, avoid crashing the route.
     if (error) {
       return NextResponse.json({ ok: true, links: [], warning: error.message }, { status: 200 });
     }
 
-    const links = (data ?? []).filter((l: any) => {
+    const rows = data ?? [];
+
+    // Look up senders for all source messages so we can filter by allowed senders.
+    const messageIds = [...new Set(rows.map((l: any) => l.source_message_id))];
+    const allowedMessageIds = new Set<string>();
+
+    // Supabase .in() has a limit, so batch in chunks of 100.
+    for (let i = 0; i < messageIds.length; i += 100) {
+      const batch = messageIds.slice(i, i + 100);
+      const { data: msgs } = await supabase
+        .from("agentmail_messages")
+        .select("message_id, from")
+        .in("message_id", batch);
+
+      for (const m of msgs ?? []) {
+        if (isAllowedSender(String((m as any).from ?? ""))) {
+          allowedMessageIds.add(String((m as any).message_id));
+        }
+      }
+    }
+
+    const links = rows.filter((l: any) => {
+      // Must be from an allowed sender.
+      if (!allowedMessageIds.has(l.source_message_id)) return false;
+
+      // Filter out Apple links.
       try {
         const host = new URL(String(l.url ?? "")).hostname;
         return !isAppleHost(host);
