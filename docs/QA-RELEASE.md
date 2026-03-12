@@ -2,6 +2,8 @@
 
 This repo ships incrementally via **PR → QA → merge → prod**.
 
+Org-wide QA loop protocol (message formats + SLAs): https://github.com/scorea-lina/bot-charter/blob/main/protocols/qa-loop.md
+
 ## Environments
 
 - **QA alias (always use for Tester QA):** https://web-qa-gamma.vercel.app
