@@ -25,6 +25,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
   const [showMarkup, setShowMarkup] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [allTags, setAllTags] = useState<TagInfo[]>([]);
   const [tagSearch, setTagSearch] = useState("");
 
@@ -118,6 +119,51 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
     [activeImage.id, activeImage.storage_path, onUpdate]
   );
 
+  const handleCopy = useCallback(async () => {
+    if (!activeImage.public_url) return;
+    setCopyStatus("Copying...");
+    try {
+      const res = await fetch(activeImage.public_url);
+      const blob = await res.blob();
+      const pngBlob = blob.type === "image/png"
+        ? blob
+        : await new Promise<Blob>((resolve) => {
+            const img = new window.Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              const ctx = canvas.getContext("2d")!;
+              ctx.drawImage(img, 0, 0);
+              canvas.toBlob((b) => resolve(b!), "image/png");
+            };
+            img.src = activeImage.public_url!;
+          });
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": pngBlob }),
+      ]);
+      setCopyStatus("Copied!");
+    } catch {
+      setCopyStatus("Failed");
+    }
+    setTimeout(() => setCopyStatus(null), 2000);
+  }, [activeImage.public_url]);
+
+  const handleDownload = useCallback(async () => {
+    if (!activeImage.public_url) return;
+    const res = await fetch(activeImage.public_url);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = activeImage.file_name || activeImage.title || "image";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [activeImage.public_url, activeImage.file_name, activeImage.title]);
+
   const handleCrop = useCallback(
     async (dataUrl: string) => {
       try {
@@ -207,7 +253,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleClone}
               disabled={cloning}
@@ -226,6 +272,18 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
               className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
             >
               Markup
+            </button>
+            <button
+              onClick={handleCopy}
+              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+            >
+              {copyStatus || "Copy"}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+            >
+              Download
             </button>
             <button
               onClick={handleArchive}
