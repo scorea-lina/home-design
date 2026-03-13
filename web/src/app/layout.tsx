@@ -31,22 +31,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto grid max-w-7xl grid-cols-[260px_1fr] gap-6 px-4 py-6">
             <aside className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
               <div className="mb-4">
-                <div className="text-xs uppercase tracking-wide text-zinc-400">Paradisa</div>
                 <div className="text-base font-semibold">Home Project Hub</div>
               </div>
 
-              <div className="mb-4 grid gap-1">
-                <div className="mb-1 text-xs font-medium text-zinc-400">Primary</div>
+              <div className="grid gap-1">
                 <NavLink href="/">Tracker</NavLink>
-                <NavLink href="/inbox">Inbox</NavLink>
                 <NavLink href="/links">Links</NavLink>
                 <NavLink href="/images">Images</NavLink>
-                <NavLink href="/archive">Archive</NavLink>
-              </div>
-
-              <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-300">
-                <div className="font-medium">Home Project Hub</div>
-                <div className="text-zinc-400">Paradisa Homes</div>
+                <NavLink href="/inbox">Inbox</NavLink>
+                <NavLink href="/archive">Archived</NavLink>
               </div>
             </aside>
 
