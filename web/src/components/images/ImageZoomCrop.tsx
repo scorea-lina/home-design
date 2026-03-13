@@ -41,18 +41,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     img.onload = () => {
       imgRef.current = img;
       setImgLoaded(true);
-      const container = containerRef.current;
-      if (container) {
-        const padding = 80;
-        const scaleX = (container.clientWidth - padding) / img.naturalWidth;
-        const scaleY = (container.clientHeight - padding) / img.naturalHeight;
-        const fitScale = Math.min(scaleX, scaleY, 1);
-        setScale(fitScale);
-        setOffset({
-          x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
-          y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
-        });
-      }
     };
     img.src = imageUrl;
   }, [imageUrl]);
@@ -218,6 +206,15 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
     });
   }, []);
+
+  // Center image after it loads AND container has its final layout
+  useEffect(() => {
+    if (!imgLoaded || !imgRef.current) return;
+    const raf = requestAnimationFrame(() => {
+      handleFit();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [imgLoaded, handleFit]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
