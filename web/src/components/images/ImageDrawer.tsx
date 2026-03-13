@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ImageRow, TagInfo } from "./ImageGrid";
 import { MarkupEditor } from "./MarkupEditor";
+import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+
+const BUCKET = "images";
 
 type Props = {
   image: ImageRow;
@@ -87,6 +90,20 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
   const handleMarkupSave = useCallback(
     async (markupJson: any, dataUrl: string) => {
+      // Convert dataUrl to blob and upload the annotated image to Storage.
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const storagePath = activeImage.storage_path;
+
+      const supabase = getSupabaseBrowserClient();
+      const { error: uploadErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, blob, { contentType: "image/png", upsert: true });
+
+      if (uploadErr) {
+        console.error("Failed to save annotated image:", uploadErr);
+      }
+
       // Save markup annotations to the image record.
       await fetch(`/api/images/${activeImage.id}`, {
         method: "PATCH",
@@ -96,23 +113,18 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
       await onUpdate();
       setShowMarkup(false);
     },
-    [activeImage.id, onUpdate]
+    [activeImage.id, activeImage.storage_path, onUpdate]
   );
 
   if (showMarkup && activeImage.public_url) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
         <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
-          <button
-            onClick={() => setShowMarkup(false)}
-            className="absolute right-4 top-4 z-10 rounded bg-zinc-800 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-700"
-          >
-            Cancel
-          </button>
           <MarkupEditor
             imageUrl={activeImage.public_url}
             existingMarkup={activeImage.markup_json}
             onSave={handleMarkupSave}
+            onCancel={() => setShowMarkup(false)}
           />
         </div>
       </div>

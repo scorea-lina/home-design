@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { fetchOgImage } from "@/lib/fetchOgImage";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function requireJobSecret(req: Request) {
   // Accept Vercel Cron (scheduled) invocations.
@@ -99,16 +101,25 @@ export async function POST(req: Request) {
       if (urls.length === 0) continue;
       found += urls.length;
 
-      const rows = urls.map((u) => ({
+      // Fetch OG images in parallel for this batch of URLs.
+      const ogResults = await Promise.allSettled(
+        urls.map((u) => fetchOgImage(u))
+      );
+
+      const rows = urls.map((u, idx) => ({
         source_message_id: messageId,
         url: u,
         title: null,
         description: null,
+        og_image_url:
+          ogResults[idx].status === "fulfilled"
+            ? (ogResults[idx] as PromiseFulfilledResult<string | null>).value || ""
+            : "",
       }));
 
       const { error: upErr } = await supabase
         .from("links")
-        .upsert(rows, { onConflict: "source_message_id,url" });
+        .upsert(rows, { onConflict: "source_message_id,url", ignoreDuplicates: true });
 
       if (upErr) {
         return NextResponse.json({ ok: false, error: upErr.message, messageId }, { status: 500 });

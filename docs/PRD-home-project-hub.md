@@ -325,6 +325,41 @@ Seed with Veronica’s list, plus required topic tags.
 
 ---
 
-## 9) Open Items (non-blocking)
+## 9) R2 Interview Decisions (2026-03-12)
+
+Answers from Veronica's technical interview session, refining the PRD for implementation.
+
+### Links tab
+- **AI summaries**: Yes, generate during ingestion (not on-demand)
+- **OG preview images**: Yes, fetch og:image from link URLs
+- **Tags**: Inherit from tasks via `source_message_id` linkage; also allow manual add/remove
+- **Detail surface**: Side drawer (same pattern as Images)
+- **Notes**: Manual, editable in the side drawer
+- **Archive**: Soft delete with `archived_at` column, "View Archived" link above the fold
+- **Sender filter**: Only show links from zachkinloch@gmail.com, veronica.tong@gmail.com, and @paradisahomes.com
+
+### Images tab
+- **Detail surface**: Side drawer (not modal)
+- **Markup tools**: Basic — freehand draw, lines, arrows, rectangles, text. 6 colors. Undo support.
+- **Clone workflow**: Clone button creates a copy linked to the original; markup only on clones (never mutate originals)
+- **Image sources from email**: Both attachments AND inline images extracted during ingestion
+- **PDF handling**: Convert each page to a PNG image (client-side via pdf.js)
+- **Upload method**: Drag-and-drop + click-to-upload button
+- **Upload size limit**: 50MB
+- **Storage**: Supabase Storage (browser uploads directly with anon key, bypasses Vercel 4.5MB body limit)
+- **Timeline/versions**: Filmstrip strip at bottom of drawer showing original + all clones
+- **Tag inheritance**: Email-sourced images adopt tags from related tasks; uploads can be tagged manually
+- **Google Slides/Docs**: Skip GCP API integration; rely on PDF upload conversion instead
+
+### General
+- **Tabs removed**: Search, Transcripts, Canvas, Settings — all deleted
+- **Tabs kept as-is**: Kanban, Inbox
+- **Navigation**: Kanban / Inbox / Links / Images / Archive
+- **Build priority**: Images first, then Links
+- **Export**: PDF export instead of Google API integration
+
+---
+
+## 10) Open Items (non-blocking)
 - Confirm exact Paradisa domain string (assumed `@paradisahomes.com`).
 - Mobile web polish level for canvas interactions.
