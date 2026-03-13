@@ -53,6 +53,7 @@ export default function NewTaskModal({ onClose, onCreated }: {
 
   const areas = allTags.filter((t) => t.category === 'area');
   const topics = allTags.filter((t) => t.category === 'topic');
+  const features = allTags.filter((t) => t.category === 'feature');
 
   return (
     <div
@@ -111,6 +112,32 @@ export default function NewTaskModal({ onClose, onCreated }: {
                   <div className="mb-1 text-[10px] uppercase tracking-wider text-cream-600">Topics</div>
                   <div className="flex flex-wrap gap-1.5">
                     {topics.map((tag) => {
+                      const sel = selectedTagIds.has(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => setSelectedTagIds((p) => {
+                            const n = new Set(p);
+                            sel ? n.delete(tag.id) : n.add(tag.id);
+                            return n;
+                          })}
+                          className={sel
+                            ? 'rounded-full border border-wood-500 bg-wood-500 px-2 py-0.5 text-[11px] font-medium text-white'
+                            : 'rounded-full border border-cream-400 px-2 py-0.5 text-[11px] text-cream-700 hover:border-cream-500'}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {features.length > 0 ? (
+                <div>
+                  <div className="mb-1 text-[10px] uppercase tracking-wider text-cream-600">Features</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {features.map((tag) => {
                       const sel = selectedTagIds.has(tag.id);
                       return (
                         <button

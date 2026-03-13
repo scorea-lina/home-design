@@ -264,7 +264,7 @@ export default function KanbanBoard() {
           onClose={() => setShowNewTask(false)}
           onCreated={(task) => {
             setTasks((ts) => [
-              { id: task.id, title: task.title, status: 'todo', notes: task.notes ?? null, tags: task.tags },
+              { id: task.id, title: task.title, status: 'todo', notes: task.notes ?? null, tags: task.tags, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
               ...ts,
             ]);
             setShowNewTask(false);
@@ -273,41 +273,40 @@ export default function KanbanBoard() {
       ) : null}
 
       {/* Tag filter pills */}
-      {allAreaTags.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {allAreaTags.map((tag) => {
-            const active = activeFilters.has(tag);
-            return (
-              <button
-                key={tag}
-                onClick={() =>
-                  setActiveFilters((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(tag)) next.delete(tag);
-                    else next.add(tag);
-                    return next;
-                  })
-                }
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  active
-                    ? 'bg-wood-500 text-white'
-                    : 'bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950'
-                }`}
-              >
-                {tag}
-              </button>
-            );
-          })}
-          {activeFilters.size > 0 ? (
+      <div className="flex flex-wrap items-center gap-2">
+        {allAreaTags.map((tag) => {
+          const active = activeFilters.has(tag);
+          return (
             <button
-              onClick={() => setActiveFilters(new Set())}
-              className="rounded-full bg-cream-200 px-3 py-1 text-xs text-cream-600 transition-colors hover:bg-cream-300 hover:text-cream-900"
+              key={tag}
+              onClick={() =>
+                setActiveFilters((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(tag)) next.delete(tag);
+                  else next.add(tag);
+                  return next;
+                })
+              }
+              className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                active
+                  ? 'bg-wood-500 text-white'
+                  : 'bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950'
+              }`}
             >
-              Clear filters ×
+              {tag}
             </button>
-          ) : null}
-        </div>
-      ) : null}
+          );
+        })}
+        {activeFilters.size > 0 ? (
+          <button
+            onClick={() => setActiveFilters(new Set())}
+            className="rounded-full bg-cream-200 px-3 py-1 text-xs text-cream-600 transition-colors hover:bg-cream-300 hover:text-cream-900"
+          >
+            Clear filters ×
+          </button>
+        ) : null}
+        <CreateTagButton onCreated={() => void refresh()} />
+      </div>
 
       {error ? (
         <div className="rounded-xl border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
@@ -700,35 +699,186 @@ function InlineTagEditor({
             className="mb-2 w-full rounded border border-cream-400 bg-cream-50 px-2 py-1 text-xs text-cream-950 placeholder:text-cream-600 focus:outline-none focus:border-wood-500"
           />
           <div className="max-h-52 overflow-auto">
-            {filtered.length === 0 ? (
-              <div className="p-2 text-xs text-cream-600">No tags found.</div>
-            ) : (
-              <div className="grid gap-1">
-                {filtered.map((tag) => {
-                  const sel = selectedIds.has(tag.id);
-                  const busy = saving === tag.id;
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => void toggle(tag)}
-                      disabled={!!saving}
-                      className={
-                        sel
-                          ? 'flex items-center justify-between rounded border border-wood-500 bg-wood-500 px-2 py-1 text-xs font-medium text-white'
-                          : 'flex items-center justify-between rounded border border-cream-300 px-2 py-1 text-xs text-cream-800 hover:border-cream-500'
+            <div className="grid gap-1">
+              {filtered.map((tag) => {
+                const sel = selectedIds.has(tag.id);
+                const busy = saving === tag.id;
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => void toggle(tag)}
+                    disabled={!!saving}
+                    className={
+                      sel
+                        ? 'flex items-center justify-between rounded border border-wood-500 bg-wood-500 px-2 py-1 text-xs font-medium text-white'
+                        : 'flex items-center justify-between rounded border border-cream-300 px-2 py-1 text-xs text-cream-800 hover:border-cream-500'
+                    }
+                  >
+                    <span className="truncate">{tag.name}</span>
+                    <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wider opacity-70">
+                      {busy ? '…' : sel ? 'ON' : tag.category}
+                    </span>
+                  </button>
+                );
+              })}
+              {q.trim() && !allTags.some((t) => t.name.toLowerCase() === q.trim().toLowerCase()) ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const name = q.trim();
+                    if (!name) return;
+                    setSaving('__new__');
+                    try {
+                      const res = await fetch('/api/tags', {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ name, category: 'area' }),
+                      });
+                      const json = await res.json();
+                      if (json.ok && json.tag) {
+                        const newTag = json.tag;
+                        setAllTags((prev) => [...prev, newTag]);
+                        setQ('');
+                        void toggle(newTag);
                       }
-                    >
-                      <span className="truncate">{tag.name}</span>
-                      <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wider opacity-70">
-                        {busy ? '…' : sel ? 'ON' : tag.category}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                    } finally {
+                      setSaving(null);
+                    }
+                  }}
+                  disabled={!!saving}
+                  className="flex items-center gap-1.5 rounded border border-dashed border-wood-400 px-2 py-1 text-xs text-wood-700 hover:bg-wood-50"
+                >
+                  <span>+</span>
+                  <span>Create &ldquo;{q.trim()}&rdquo;</span>
+                </button>
+              ) : null}
+              {filtered.length === 0 && !q.trim() ? (
+                <div className="p-2 text-xs text-cream-600">No tags found.</div>
+              ) : null}
+            </div>
           </div>
+        </div>
+      ) : null}
+    </span>
+  );
+}
+
+
+function CreateTagButton({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState<'area' | 'topic' | 'feature'>('area');
+  const [saving, setSaving] = useState(false);
+  const popRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    function onPointerDown(e: PointerEvent) {
+      const el = popRef.current;
+      if (!el) return;
+      const target = e.target as Node | null;
+      if (target && !el.contains(target)) setOpen(false);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [open]);
+
+  async function create() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: trimmed, category }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setName('');
+        setOpen(false);
+        onCreated();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <span className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="rounded-full border border-dashed border-cream-500 px-3 py-1 text-xs text-cream-600 transition-colors hover:border-wood-500 hover:text-wood-700"
+        title="Create new tag"
+      >
+        + New tag
+      </button>
+
+      {open ? (
+        <div
+          ref={popRef}
+          className="absolute left-0 top-full z-20 mt-1 w-60 rounded-lg border border-cream-400 bg-white p-3 shadow-warm-lg"
+        >
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void create(); }}
+            placeholder="Tag name…"
+            className="mb-2 w-full rounded border border-cream-400 bg-cream-50 px-2 py-1.5 text-xs text-cream-950 placeholder:text-cream-600 focus:outline-none focus:border-wood-500"
+            autoFocus
+          />
+          <div className="mb-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCategory('area')}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                category === 'area'
+                  ? 'bg-wood-500 text-white'
+                  : 'border border-cream-300 text-cream-700 hover:border-cream-500'
+              }`}
+            >
+              Area
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('topic')}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                category === 'topic'
+                  ? 'bg-wood-500 text-white'
+                  : 'border border-cream-300 text-cream-700 hover:border-cream-500'
+              }`}
+            >
+              Topic
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('feature')}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                category === 'feature'
+                  ? 'bg-wood-500 text-white'
+                  : 'border border-cream-300 text-cream-700 hover:border-cream-500'
+              }`}
+            >
+              Feature
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => void create()}
+            disabled={saving || !name.trim()}
+            className="w-full rounded bg-wood-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-wood-600 disabled:opacity-50"
+          >
+            {saving ? 'Creating…' : 'Create tag'}
+          </button>
         </div>
       ) : null}
     </span>
