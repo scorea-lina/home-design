@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// All /api/jobs/* endpoints are gated by their own x-jobs-secret / CRON_SECRET auth.
-const EXCLUDED = ['/api/jobs/'];
+// All /api/* routes are internal (called from authenticated pages).
+// /api/jobs/* endpoints have their own CRON_SECRET auth.
+const EXCLUDED = ['/api/'];
 
 export function middleware(req: NextRequest) {
   const sitePassword = process.env.SITE_PASSWORD;
