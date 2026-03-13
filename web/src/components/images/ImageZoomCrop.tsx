@@ -14,14 +14,12 @@ type Props = {
  * - Click + drag to pan
  * - "Crop" button enters crop mode: draw a rectangle, confirm to extract
  *
- * Positioning model:
- *   The image top-left corner is placed at pixel position (offsetX, offsetY)
- *   within the viewport container. The displayed size is naturalWidth * scale
- *   by naturalHeight * scale. All positioning is done with explicit pixels —
- *   no CSS transform or percentage-based translate.
+ * Coordinate mapping uses the actual rendered <img> element's bounding rect
+ * so the crop always matches exactly what's visible on screen.
  */
 export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgElRef = useRef<HTMLImageElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -97,23 +95,24 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     [scale, offset, cropMode]
   );
 
-  // Convert screen coords to image coords
+  // Convert screen coords to image coords using actual rendered img element
   const screenToImage = useCallback(
     (clientX: number, clientY: number) => {
-      const container = containerRef.current;
-      if (!container || !imgRef.current) return { x: 0, y: 0 };
-      const rect = container.getBoundingClientRect();
-      const img = imgRef.current;
+      const imgEl = imgElRef.current;
+      if (!imgEl || !imgRef.current) return { x: 0, y: 0 };
+      const imgRect = imgEl.getBoundingClientRect();
+      const nw = imgRef.current.naturalWidth;
+      const nh = imgRef.current.naturalHeight;
 
-      const x = (clientX - rect.left - offset.x) / scale;
-      const y = (clientY - rect.top - offset.y) / scale;
+      const x = ((clientX - imgRect.left) / imgRect.width) * nw;
+      const y = ((clientY - imgRect.top) / imgRect.height) * nh;
 
       return {
-        x: Math.max(0, Math.min(img.naturalWidth, x)),
-        y: Math.max(0, Math.min(img.naturalHeight, y)),
+        x: Math.max(0, Math.min(nw, x)),
+        y: Math.max(0, Math.min(nh, y)),
       };
     },
-    [scale, offset]
+    []
   );
 
   // Mouse handlers for pan + crop
@@ -162,7 +161,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     }
   }, [cropping]);
 
-  // Get normalized crop rect (top-left to bottom-right)
+  // Get normalized crop rect (top-left to bottom-right) in image coords
   const getNormalizedCrop = useCallback(() => {
     if (!cropRect) return null;
     return {
@@ -173,18 +172,23 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     };
   }, [cropRect]);
 
-  // Convert crop rect from image coords to screen coords for overlay
+  // Convert crop rect from image coords to screen coords using actual img element
   const getCropScreenRect = useCallback(() => {
     const norm = getNormalizedCrop();
-    if (!norm || !containerRef.current) return null;
+    if (!norm || !containerRef.current || !imgElRef.current || !imgRef.current) return null;
+
+    const imgRect = imgElRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const nw = imgRef.current.naturalWidth;
+    const nh = imgRef.current.naturalHeight;
 
     return {
-      left: offset.x + norm.x * scale,
-      top: offset.y + norm.y * scale,
-      width: norm.w * scale,
-      height: norm.h * scale,
+      left: (imgRect.left - containerRect.left) + (norm.x / nw) * imgRect.width,
+      top: (imgRect.top - containerRect.top) + (norm.y / nh) * imgRect.height,
+      width: (norm.w / nw) * imgRect.width,
+      height: (norm.h / nh) * imgRect.height,
     };
-  }, [getNormalizedCrop, scale, offset]);
+  }, [getNormalizedCrop]);
 
   // Extract crop at full resolution
   const handleExtractCrop = useCallback(async () => {
@@ -251,8 +255,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   }, [cropRect, onClose]);
 
   const cropScreen = getCropScreenRect();
-
-  // Compute displayed image dimensions
   const imgW = imgRef.current ? imgRef.current.naturalWidth * scale : 0;
 
   return (
@@ -369,6 +371,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
 
         {imgLoaded && imgRef.current && (
           <img
+            ref={imgElRef}
             src={imageUrl}
             alt="Zoom view"
             draggable={false}
