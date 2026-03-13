@@ -54,3 +54,19 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, tag: data });
 }
+
+export async function DELETE(req: NextRequest) {
+  const body = await req.json();
+  const id = String(body.id ?? '').trim();
+  if (!id) return NextResponse.json({ ok: false, error: 'Tag id is required' }, { status: 400 });
+
+  const supabase = getSupabaseServerClient();
+
+  // Remove all assignments for this tag first
+  await supabase.from('tag_assignments').delete().eq('tag_id', id);
+
+  // Soft-delete by setting active = false
+  const { error } = await supabase.from('tags').update({ active: false }).eq('id', id);
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

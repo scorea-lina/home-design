@@ -285,25 +285,57 @@ export default function KanbanBoard() {
       <div className="flex flex-wrap items-center gap-2">
         {allAreaTags.map((tag) => {
           const active = activeFilters.has(tag);
+          const tagObj = allTagsList.find((t) => t.name === tag && t.category === 'area');
           return (
-            <button
-              key={tag}
-              onClick={() =>
-                setActiveFilters((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(tag)) next.delete(tag);
-                  else next.add(tag);
-                  return next;
-                })
-              }
-              className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                active
-                  ? 'bg-wood-500 text-white'
-                  : 'bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950'
-              }`}
-            >
-              {tag}
-            </button>
+            <span key={tag} className="group relative inline-flex items-center">
+              <button
+                onClick={() =>
+                  setActiveFilters((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(tag)) next.delete(tag);
+                    else next.add(tag);
+                    return next;
+                  })
+                }
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                  active
+                    ? 'bg-wood-500 text-white'
+                    : 'bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950'
+                }`}
+              >
+                {tag}
+              </button>
+              {tagObj ? (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Delete tag "${tag}"? It will be removed from all tasks.`)) return;
+                    try {
+                      const res = await fetch('/api/tags', {
+                        method: 'DELETE',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify({ id: tagObj.id }),
+                      });
+                      const json = await res.json();
+                      if (json.ok) {
+                        void fetchTags();
+                        void refresh();
+                        setActiveFilters((prev) => {
+                          const next = new Set(prev);
+                          next.delete(tag);
+                          return next;
+                        });
+                      }
+                    } catch {}
+                  }}
+                  className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-terra-500 text-[10px] leading-none text-white group-hover:flex"
+                  title={`Delete "${tag}"`}
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
           );
         })}
         {activeFilters.size > 0 ? (
@@ -426,12 +458,43 @@ export default function KanbanBoard() {
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           {tags.map((tag) => (
-                            <span
-                              key={`${tag.category}:${tag.name}`}
-                              className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-950"
-                            >
-                              {tag.name}
-                            </span>
+                            isExpanded ? (
+                              <span
+                                key={`${tag.category}:${tag.name}`}
+                                className="group inline-flex items-center gap-0.5 rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-950"
+                              >
+                                {tag.name}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const tagId = tag.id;
+                                    if (!tagId) return;
+                                    const prev = t.tags ?? [];
+                                    const next = prev.filter((tg) => String(tg.id ?? '') !== tagId);
+                                    setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, tags: next } : tk)));
+                                    fetch(`/api/tasks/${encodeURIComponent(t.id)}/tags`, {
+                                      method: 'PATCH',
+                                      headers: { 'content-type': 'application/json' },
+                                      body: JSON.stringify({ tagId, enabled: false }),
+                                    }).catch(() => {
+                                      setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, tags: prev } : tk)));
+                                    });
+                                  }}
+                                  className="ml-0.5 hidden rounded-full text-cream-600 hover:text-cream-900 group-hover:inline"
+                                  title={`Remove ${tag.name}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ) : (
+                              <span
+                                key={`${tag.category}:${tag.name}`}
+                                className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-950"
+                              >
+                                {tag.name}
+                              </span>
+                            )
                           ))}
                           {isExpanded ? (
                             <InlineTagEditor
@@ -440,6 +503,7 @@ export default function KanbanBoard() {
                               onChange={(nextTags) => {
                                 setTasks((ts) => ts.map((tk) => (tk.id === t.id ? { ...tk, tags: nextTags } : tk)));
                               }}
+                              onTagCreated={fetchTags}
                             />
                           ) : null}
                         </div>
@@ -600,10 +664,12 @@ function InlineTagEditor({
   taskId,
   tags,
   onChange,
+  onTagCreated,
 }: {
   taskId: string;
   tags: TaskTag[];
   onChange: (tags: TaskTag[]) => void;
+  onTagCreated?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -750,6 +816,7 @@ function InlineTagEditor({
                         setAllTags((prev) => [...prev, newTag]);
                         setQ('');
                         void toggle(newTag);
+                        onTagCreated?.();
                       }
                     } finally {
                       setSaving(null);
