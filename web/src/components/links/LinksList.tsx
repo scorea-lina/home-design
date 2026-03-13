@@ -152,8 +152,8 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
                   <div className="text-xs text-zinc-400 line-clamp-2">{link.description}</div>
                 )}
 
-                {/* Hostname */}
-                {link.hostname && (
+                {/* Hostname (skip if already shown as title) */}
+                {link.hostname && link.title && link.title !== link.hostname && (
                   <div className="text-xs text-zinc-500">{link.hostname}</div>
                 )}
 
