@@ -66,19 +66,28 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       const container = containerRef.current;
       if (!container) return;
 
-      const rect = container.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const cursorY = e.clientY - rect.top;
+      // Pinch-to-zoom on trackpad or Ctrl/Cmd + scroll → zoom
+      if (e.ctrlKey || e.metaKey) {
+        const rect = container.getBoundingClientRect();
+        const cursorX = e.clientX - rect.left;
+        const cursorY = e.clientY - rect.top;
 
-      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      const newScale = Math.max(0.1, Math.min(20, scale * zoomFactor));
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const newScale = Math.max(0.1, Math.min(20, scale * zoomFactor));
 
-      const ratio = newScale / scale;
-      setScale(newScale);
-      setOffset({
-        x: cursorX - ratio * (cursorX - offset.x),
-        y: cursorY - ratio * (cursorY - offset.y),
-      });
+        const ratio = newScale / scale;
+        setScale(newScale);
+        setOffset({
+          x: cursorX - ratio * (cursorX - offset.x),
+          y: cursorY - ratio * (cursorY - offset.y),
+        });
+      } else {
+        // Plain scroll → pan
+        setOffset({
+          x: offset.x - e.deltaX,
+          y: offset.y - e.deltaY,
+        });
+      }
     },
     [scale, offset, cropMode]
   );
@@ -330,7 +339,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       <div className="px-4 py-1.5 text-xs text-cream-600">
         {cropMode
           ? "Draw a rectangle on the image to select a crop area"
-          : "Scroll to zoom \u00B7 Click + drag to pan"}
+          : "Scroll to pan \u00B7 Pinch or \u2318+scroll to zoom \u00B7 Click + drag to pan"}
       </div>
 
       {/* Image viewport */}
