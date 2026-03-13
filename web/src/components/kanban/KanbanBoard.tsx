@@ -414,6 +414,8 @@ export default function KanbanBoard() {
                       });
                     }}
                     onKeyDown={(e) => {
+                      const tag = (e.target as HTMLElement).tagName;
+                      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         setExpanded((p) => {
@@ -438,7 +440,7 @@ export default function KanbanBoard() {
                           <input
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') void saveEdit(t.id); if (e.key === 'Escape') setEditingId(null); }}
+                            onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null); }}
                             className="w-full rounded border border-cream-400 bg-cream-50 px-1 py-0.5 text-base font-medium text-cream-950 focus:outline-none focus:border-wood-500"
                             autoFocus
                             onClick={(e) => e.stopPropagation()}
@@ -572,7 +574,6 @@ export default function KanbanBoard() {
                               rows={3}
                               className="w-full rounded border border-cream-400 bg-cream-50 px-2 py-1 text-sm text-cream-950 focus:outline-none focus:border-wood-500"
                               placeholder="Notes (optional)"
-                              autoFocus={!t.notes}
                             />
                             <div className="flex gap-2">
                               <button
