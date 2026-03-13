@@ -184,47 +184,45 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 space-y-2 rounded-lg bg-zinc-900 py-2">
-        <div className="flex items-center gap-3">
-          {/* Tool buttons */}
-          <div className="flex gap-1">
-            {TOOLS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTool(t.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  tool === t.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Color swatches */}
-          <div className="flex gap-1">
-            {COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className={`h-7 w-7 rounded-full border-2 transition-all ${
-                  color === c ? "border-white scale-110" : "border-zinc-600"
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
+      <div className="sticky top-0 z-10 flex items-center gap-3 rounded-lg bg-zinc-900 py-2">
+        {/* Tool buttons */}
+        <div className="flex gap-1">
+          {TOOLS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTool(t.id)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                tool === t.id
+                  ? "bg-blue-600 text-white"
+                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* Color swatches */}
+        <div className="flex gap-1">
+          {COLORS.map((c) => (
+            <button
+              key={c}
+              onClick={() => setColor(c)}
+              className={`h-7 w-7 rounded-full border-2 transition-all ${
+                color === c ? "border-white scale-110" : "border-zinc-600"
+              }`}
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </div>
+
+        {/* Actions — right aligned */}
+        <div className="ml-auto flex items-center gap-1.5">
           <button
             onClick={handleUndo}
             disabled={annotations.length === 0}
             title="Undo"
-            className="rounded-lg bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700 disabled:opacity-30"
+            className="rounded-lg bg-zinc-800 px-2 py-1.5 text-zinc-300 hover:bg-zinc-700 disabled:opacity-30"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.69 3L3 13"/></svg>
           </button>
@@ -232,7 +230,7 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
             <button
               onClick={onCancel}
               title="Cancel"
-              className="rounded-lg bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg bg-zinc-800 px-2 py-1.5 text-zinc-300 hover:bg-zinc-700"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>

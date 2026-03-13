@@ -189,6 +189,27 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             >
               Archive
             </button>
+            {activeImage.original_image_id && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Delete this clone? This cannot be undone.")) return;
+                  await fetch(`/api/images/${activeImage.id}`, { method: "DELETE" });
+                  await onUpdate();
+                  // Switch back to original or close.
+                  const original = allImages.find((i) => i.id === activeImage.original_image_id);
+                  if (original) {
+                    setActiveImage(original);
+                    setTitle(original.title ?? "");
+                    setNotes(original.notes ?? "");
+                  } else {
+                    onClose();
+                  }
+                }}
+                className="rounded-lg bg-red-900/50 px-4 py-2 text-sm text-red-300 hover:bg-red-900/80"
+              >
+                Delete
+              </button>
+            )}
           </div>
 
           {/* Tags */}
