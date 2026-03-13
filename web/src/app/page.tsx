@@ -10,9 +10,6 @@ export default function KanbanHomePage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Kanban</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          New extracted items land in <span className="text-zinc-200">To Do</span>.
-        </p>
       </header>
 
       <Suspense>

@@ -274,22 +274,6 @@ export default function KanbanBoard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setShowNewTask(true)}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-800"
-        >
-          ＋ New Task
-        </button>
-        <button
-          onClick={() => void refresh()}
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
-          disabled={loading}
-        >
-          Refresh
-        </button>
-      </div>
-
       {/* New Task modal */}
       {showNewTask ? (
         <NewTaskModal
@@ -352,7 +336,17 @@ export default function KanbanBoard() {
         {columns.map((col) => (
           <div key={col.id} className="w-[400px] min-w-[400px] shrink-0 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium text-zinc-200">{col.title}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-zinc-200">{col.title}</div>
+                {col.id === 'todo' ? (
+                  <button
+                    onClick={() => setShowNewTask(true)}
+                    className="rounded border border-zinc-700 px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  >
+                    +
+                  </button>
+                ) : null}
+              </div>
               <div className="text-xs text-zinc-500">{grouped[col.id].length}</div>
             </div>
 
