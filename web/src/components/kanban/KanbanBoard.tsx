@@ -328,7 +328,7 @@ export default function KanbanBoard() {
 
       {error ? (
         <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
-          Kanban failed to load: {error}
+          Failed to load: {error}
         </div>
       ) : null}
 
