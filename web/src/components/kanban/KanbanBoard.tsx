@@ -168,15 +168,24 @@ export default function KanbanBoard() {
     }
   }
 
+  const [allTagsList, setAllTagsList] = useState<{ id: string; name: string; category: string }[]>([]);
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tags', { cache: 'no-store' });
+      const json = await res.json();
+      if (json.ok) setAllTagsList(json.tags ?? []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { void fetchTags(); }, [fetchTags]);
+
   const allAreaTags = useMemo(() => {
-    const seen = new Set<string>();
-    for (const t of tasks) {
-      for (const tag of t.tags ?? []) {
-        if (tag.category === 'area') seen.add(tag.name);
-      }
-    }
-    return Array.from(seen).sort();
-  }, [tasks]);
+    return allTagsList
+      .filter((t) => t.category === 'area')
+      .map((t) => t.name)
+      .sort();
+  }, [allTagsList]);
 
   const visibleTasks = useMemo(() => {
     if (activeFilters.size === 0) return tasks;
@@ -305,7 +314,7 @@ export default function KanbanBoard() {
             Clear filters ×
           </button>
         ) : null}
-        <CreateTagButton onCreated={() => void refresh()} />
+        <CreateTagButton onCreated={() => { void refresh(); void fetchTags(); }} />
       </div>
 
       {error ? (
