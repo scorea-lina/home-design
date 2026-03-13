@@ -44,17 +44,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <NavLink href="/archive">Archive</NavLink>
               </div>
 
-              <div className="grid gap-1">
-                <div className="mb-1 text-xs font-medium text-zinc-400">Explore</div>
-                <NavLink href="/search">Search</NavLink>
-                <NavLink href="/transcripts">Transcripts</NavLink>
-                <NavLink href="/canvas">Canvas</NavLink>
-                <NavLink href="/settings">Settings</NavLink>
-              </div>
-
               <div className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-300">
-                <div className="font-medium">M0 scaffold</div>
-                <div className="text-zinc-400">UI shells + SQLite migrations</div>
+                <div className="font-medium">Home Project Hub</div>
+                <div className="text-zinc-400">Paradisa Homes</div>
               </div>
             </aside>
 
