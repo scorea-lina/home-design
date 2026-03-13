@@ -30,9 +30,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${ebGaramond.variable} antialiased`}>
-        <div className="min-h-screen bg-cream-200 text-cream-950">
+        <div className="relative min-h-screen bg-cream-200 text-cream-950">
+          <div
+            className="pointer-events-none fixed inset-0 bg-cover bg-center bg-no-repeat opacity-40"
+            style={{ backgroundImage: "url('/house-bg.png')" }}
+          />
           <div className="mx-auto grid max-w-7xl grid-cols-[200px_1fr] gap-6 px-4 py-6">
-            <aside className="rounded-2xl border border-cream-400/60 bg-cream-100/80 p-5 shadow-warm backdrop-blur-sm">
+            <aside className="rounded-2xl border border-cream-400/60 bg-cream-100/95 p-5 shadow-warm backdrop-blur-sm">
               <div className="mb-5">
                 <div className="text-base font-semibold tracking-tight text-cream-900">Home Project Hub</div>
               </div>
@@ -46,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </aside>
 
-            <main className="min-w-0 rounded-2xl border border-cream-400/60 bg-white/70 p-6 shadow-warm backdrop-blur-sm">{children}</main>
+            <main className="min-w-0 rounded-2xl border border-cream-400/60 bg-white/90 p-6 shadow-warm backdrop-blur-sm">{children}</main>
           </div>
         </div>
       </body>
