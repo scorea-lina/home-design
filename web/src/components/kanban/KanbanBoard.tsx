@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import NewTaskModal from './NewTaskModal';
 
-type ColumnId = 'todo' | 'done';
+type ColumnId = 'todo' | 'discussed' | 'done';
 
-type RawStatus = 'done' | 'triage' | 'todo' | 'doing' | (string & {});
+type RawStatus = 'done' | 'discussed' | 'triage' | 'todo' | 'doing' | (string & {});
 
 type TaskTag = { id?: string; name: string; category: 'area' | 'topic' | (string & {}) };
 
@@ -27,11 +27,13 @@ type Task = {
 
 function normalizeStatus(status: RawStatus | null | undefined): ColumnId {
   if (status === 'done') return 'done';
+  if (status === 'discussed') return 'discussed';
   return 'todo';
 }
 
 const columns: { id: ColumnId; title: string }[] = [
   { id: 'todo', title: 'To Do' },
+  { id: 'discussed', title: 'Discussed' },
   { id: 'done', title: 'Done' },
 ];
 
@@ -95,7 +97,7 @@ export default function KanbanBoard() {
     }
   }
 
-  async function patchStatus(taskId: string, status: 'todo' | 'done' | 'archived') {
+  async function patchStatus(taskId: string, status: 'todo' | 'discussed' | 'done' | 'archived') {
     const prev = tasks;
 
     // Optimistic UI
@@ -193,7 +195,7 @@ export default function KanbanBoard() {
   }, [tasks, activeFilters]);
 
   const grouped = useMemo(() => {
-    const g: Record<ColumnId, Task[]> = { todo: [], done: [] };
+    const g: Record<ColumnId, Task[]> = { todo: [], discussed: [], done: [] };
     for (const t of visibleTasks) {
       g[normalizeStatus(t.status)].push(t);
     }
@@ -220,6 +222,13 @@ export default function KanbanBoard() {
       const aid = String(a.id ?? '');
       const bid = String(b.id ?? '');
       return bid.localeCompare(aid);
+    });
+    g.discussed.sort((a, b) => {
+      const at = a.updated_at ?? a.created_at;
+      const bt = b.updated_at ?? b.created_at;
+      const an = at ? +new Date(String(at)) : 0;
+      const bn = bt ? +new Date(String(bt)) : 0;
+      return bn - an;
     });
     g.done.sort((a, b) => {
       const at = a.updated_at ?? a.created_at;
@@ -339,9 +348,9 @@ export default function KanbanBoard() {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <section className="flex gap-4 overflow-x-auto pb-2">
         {columns.map((col) => (
-          <div key={col.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+          <div key={col.id} className="w-[400px] min-w-[400px] shrink-0 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-sm font-medium text-zinc-200">{col.title}</div>
               <div className="text-xs text-zinc-500">{grouped[col.id].length}</div>
@@ -451,36 +460,49 @@ export default function KanbanBoard() {
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1">
-                        {current === 'done' ? (
+                        {/* Back arrow: discussed→todo, done→discussed */}
+                        {current === 'discussed' ? (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void patchStatus(t.id, 'todo');
-                            }}
-                            title="Revert to To Do"
+                            onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'todo'); }}
+                            title="Move to To Do"
                             className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                           </button>
-                        ) : (
+                        ) : current === 'done' ? (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void patchStatus(t.id, 'done');
-                            }}
+                            onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'discussed'); }}
+                            title="Move to Discussed"
+                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+                            disabled={loading}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                          </button>
+                        ) : null}
+                        {/* Forward: todo→discussed (speech bubble), discussed→done (checkmark) */}
+                        {current === 'todo' ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'discussed'); }}
+                            title="Mark as Discussed"
+                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-blue-400 disabled:opacity-50"
+                            disabled={loading}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                          </button>
+                        ) : null}
+                        {current !== 'done' ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'done'); }}
                             title="Mark as Done"
                             className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-emerald-400 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           </button>
-                        )}
+                        ) : null}
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void patchStatus(t.id, 'archived');
-                          }}
+                          onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'archived'); }}
                           title="Archive"
                           className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
                           disabled={loading}
