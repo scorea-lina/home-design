@@ -243,6 +243,43 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             </button>
           )}
 
+          {thread.length > 1 && (
+            <div>
+              <div className="mb-2 text-xs font-medium text-cream-700">
+                Versions ({thread.length})
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {thread.map((img, i) => (
+                  <button
+                    key={img.id}
+                    onClick={() => {
+                      setActiveImage(img);
+                      setTitle(img.title ?? "");
+                      setNotes(img.notes ?? "");
+                      setEditing(false);
+                    }}
+                    className={`flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
+                      img.id === activeImage.id
+                        ? "border-wood-500"
+                        : "border-cream-400 hover:border-cream-500"
+                    }`}
+                  >
+                    {img.public_url && (
+                      <img
+                        src={img.public_url}
+                        alt={`Version ${i + 1}`}
+                        className="h-16 w-16 object-cover"
+                      />
+                    )}
+                    <div className="px-1 py-0.5 text-center text-[10px] text-cream-700">
+                      {i === 0 ? "Original" : `v${i}`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleClone}
@@ -444,42 +481,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             <div>Uploaded: {new Date(activeImage.created_at).toLocaleString()}</div>
           </div>
 
-          {thread.length > 1 && (
-            <div>
-              <div className="mb-2 text-xs font-medium text-cream-700">
-                Versions ({thread.length})
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {thread.map((img, i) => (
-                  <button
-                    key={img.id}
-                    onClick={() => {
-                      setActiveImage(img);
-                      setTitle(img.title ?? "");
-                      setNotes(img.notes ?? "");
-                      setEditing(false);
-                    }}
-                    className={`flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                      img.id === activeImage.id
-                        ? "border-wood-500"
-                        : "border-cream-400 hover:border-cream-500"
-                    }`}
-                  >
-                    {img.public_url && (
-                      <img
-                        src={img.public_url}
-                        alt={`Version ${i + 1}`}
-                        className="h-16 w-16 object-cover"
-                      />
-                    )}
-                    <div className="px-1 py-0.5 text-center text-[10px] text-cream-700">
-                      {i === 0 ? "Original" : `v${i}`}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>,
