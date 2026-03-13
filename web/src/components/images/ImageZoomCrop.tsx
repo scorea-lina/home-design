@@ -207,13 +207,30 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     });
   }, []);
 
-  // Center image after it loads AND container has its final layout
+  // Center image once loaded AND container has real dimensions
   useEffect(() => {
     if (!imgLoaded || !imgRef.current) return;
-    const raf = requestAnimationFrame(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // If container already has dimensions, fit immediately
+    if (container.clientHeight > 0) {
       handleFit();
+      return;
+    }
+
+    // Otherwise wait for container to get its layout
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.height > 0) {
+          handleFit();
+          ro.disconnect();
+          return;
+        }
+      }
     });
-    return () => cancelAnimationFrame(raf);
+    ro.observe(container);
+    return () => ro.disconnect();
   }, [imgLoaded, handleFit]);
 
   useEffect(() => {
