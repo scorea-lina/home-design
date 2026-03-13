@@ -288,11 +288,11 @@ export default function KanbanBoard() {
                     return next;
                   })
                 }
-                className={
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
                   active
-                    ? 'rounded-full border border-wood-500 bg-wood-500 px-3 py-1 text-xs font-medium text-white'
-                    : 'rounded-full border border-cream-400 bg-cream-100 px-3 py-1 text-xs text-cream-700 hover:border-cream-500 hover:text-cream-900'
-                }
+                    ? 'bg-wood-500 text-white'
+                    : 'bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900'
+                }`}
               >
                 {tag}
               </button>
@@ -301,7 +301,7 @@ export default function KanbanBoard() {
           {activeFilters.size > 0 ? (
             <button
               onClick={() => setActiveFilters(new Set())}
-              className="rounded-full border border-cream-400 px-3 py-1 text-xs text-cream-600 hover:text-cream-900"
+              className="rounded-full bg-cream-200 px-3 py-1 text-xs text-cream-600 transition-colors hover:bg-cream-300 hover:text-cream-900"
             >
               Clear filters ×
             </button>
