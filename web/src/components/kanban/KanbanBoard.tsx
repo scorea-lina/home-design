@@ -348,7 +348,7 @@ export default function KanbanBoard() {
         </div>
       ) : null}
 
-      <section className="flex gap-4 overflow-x-auto pb-2">
+      <section className="flex items-start gap-4 overflow-x-auto pb-2">
         {columns.map((col) => (
           <div key={col.id} className="w-[400px] min-w-[400px] shrink-0 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="mb-3 flex items-center justify-between">
