@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ImageRow, TagInfo } from "./ImageGrid";
 import { MarkupEditor } from "./MarkupEditor";
+import { ImageZoomCrop } from "./ImageZoomCrop";
 import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 const BUCKET = "images";
@@ -23,6 +24,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
   const [cloning, setCloning] = useState(false);
   const [showMarkup, setShowMarkup] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [showZoom, setShowZoom] = useState(false);
   const [allTags, setAllTags] = useState<TagInfo[]>([]);
   const [tagSearch, setTagSearch] = useState("");
 
@@ -116,6 +118,38 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
     [activeImage.id, activeImage.storage_path, onUpdate]
   );
 
+  const handleCrop = useCallback(
+    async (dataUrl: string) => {
+      try {
+        const res = await fetch(`/api/images/${activeImage.id}/crop`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataUrl }),
+        });
+        const json = await res.json();
+        if (json.ok && json.image) {
+          await onUpdate();
+          setActiveImage(json.image);
+          setShowZoom(false);
+          setShowMarkup(true);
+        }
+      } catch (err) {
+        console.error("Crop failed:", err);
+      }
+    },
+    [activeImage.id, onUpdate]
+  );
+
+  if (showZoom && activeImage.public_url) {
+    return (
+      <ImageZoomCrop
+        imageUrl={activeImage.public_url}
+        onCrop={handleCrop}
+        onClose={() => setShowZoom(false)}
+      />
+    );
+  }
+
   if (showMarkup && activeImage.public_url) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
@@ -153,13 +187,23 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Main image */}
+          {/* Main image — click to zoom */}
           {activeImage.public_url && (
-            <img
-              src={activeImage.public_url}
-              alt={activeImage.title || "Image"}
-              className="w-full rounded-lg border border-zinc-800"
-            />
+            <button
+              onClick={() => setShowZoom(true)}
+              className="group relative w-full overflow-hidden rounded-lg border border-zinc-800"
+            >
+              <img
+                src={activeImage.public_url}
+                alt={activeImage.title || "Image"}
+                className="w-full"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                <span className="rounded bg-black/70 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  Zoom &amp; Crop
+                </span>
+              </div>
+            </button>
           )}
 
           {/* Actions */}
