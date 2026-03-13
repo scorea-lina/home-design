@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ImageRow, TagInfo } from "./ImageGrid";
 import { MarkupEditor } from "./MarkupEditor";
 import { ImageZoomCrop } from "./ImageZoomCrop";
@@ -191,7 +192,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
   }
 
   if (showMarkup && activeImage.public_url) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-cream-950/40 backdrop-blur-sm">
         <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-cream-400/60 bg-white p-4 shadow-warm-xl">
           <MarkupEditor
@@ -201,11 +202,12 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             onCancel={() => setShowMarkup(false)}
           />
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-40 flex">
       <div className="flex-1 bg-cream-950/10" onClick={onClose} />
 
@@ -480,6 +482,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
