@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F5F0EB;
+  --foreground: #2C2825;
 }
 
 @theme inline {
@@ -10,17 +10,56 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Mediterranean warm neutrals */
+  --color-cream-50: #FDFBF9;
+  --color-cream-100: #F9F6F3;
+  --color-cream-200: #F5F0EB;
+  --color-cream-300: #EDE7DF;
+  --color-cream-400: #E2DBD3;
+  --color-cream-500: #D5CEC5;
+  --color-cream-600: #B5ADA5;
+  --color-cream-700: #8A7F75;
+  --color-cream-800: #5C534A;
+  --color-cream-900: #3D3630;
+  --color-cream-950: #2C2825;
+
+  /* Natural wood accent */
+  --color-wood-300: #C4AD8F;
+  --color-wood-400: #A08B6D;
+  --color-wood-500: #8B7355;
+  --color-wood-600: #7A6548;
+  --color-wood-700: #6B5A42;
+
+  /* Sage green */
+  --color-sage-300: #A3BF95;
+  --color-sage-400: #8DAA7E;
+  --color-sage-500: #7C9A6E;
+  --color-sage-600: #6B8A5E;
+
+  /* Terra cotta */
+  --color-terra-300: #E4917A;
+  --color-terra-400: #D4785A;
+  --color-terra-500: #C45D4A;
+  --color-terra-600: #B04E3D;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Warm shadow utilities */
+.shadow-warm {
+  box-shadow: 0 1px 3px rgba(139, 115, 85, 0.08), 0 1px 2px rgba(139, 115, 85, 0.04);
+}
+.shadow-warm-md {
+  box-shadow: 0 4px 6px rgba(139, 115, 85, 0.07), 0 2px 4px rgba(139, 115, 85, 0.04);
+}
+.shadow-warm-lg {
+  box-shadow: 0 10px 25px rgba(139, 115, 85, 0.10), 0 4px 10px rgba(139, 115, 85, 0.05);
+}
+.shadow-warm-xl {
+  box-shadow: 0 20px 40px rgba(139, 115, 85, 0.12), 0 8px 16px rgba(139, 115, 85, 0.06);
 }

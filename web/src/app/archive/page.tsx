@@ -75,7 +75,6 @@ export default function ArchivePage() {
       });
       const json = (await res.json()) as { ok: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      // Remove from local list immediately (optimistic).
       setTasks((ts) => ts.filter((t) => t.id !== taskId));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -103,7 +102,6 @@ export default function ArchivePage() {
     return true;
   });
 
-  // Group by day of archived_at.
   const groups: { day: string; tasks: ArchivedTask[] }[] = [];
   const seen: Record<string, number> = {};
   for (const t of filteredTasks) {
@@ -119,16 +117,16 @@ export default function ArchivePage() {
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Archive</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Archive</h1>
+          <p className="mt-1 text-sm text-cream-700">
             Tasks you've archived — out of the way, but not gone.
           </p>
         </div>
         <a
           href="/"
-          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+          className="rounded-lg border border-cream-400 bg-cream-100 px-3 py-2 text-sm text-cream-900 hover:bg-cream-200"
         >
-          ← Back to Kanban
+          ← Back to Tracker
         </a>
       </header>
 
@@ -138,12 +136,12 @@ export default function ArchivePage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search archived tasks…"
-          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 md:w-[360px]"
+          className="w-full rounded-lg border border-cream-400 bg-cream-50 px-3 py-2 text-sm text-cream-950 placeholder:text-cream-600 focus:border-wood-500 focus:outline-none md:w-[360px]"
         />
         <select
           value={tagFilter}
           onChange={(e) => setTagFilter(e.target.value)}
-          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+          className="rounded-lg border border-cream-400 bg-cream-50 px-3 py-2 text-sm text-cream-950"
         >
           <option value="">All tags</option>
           {allTagNames.map((t) => (
@@ -153,7 +151,7 @@ export default function ArchivePage() {
         {(q || tagFilter) ? (
           <button
             onClick={() => { setQ(''); setTagFilter(''); }}
-            className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
+            className="rounded-lg border border-cream-400 bg-cream-100 px-3 py-2 text-sm text-cream-900 hover:bg-cream-200"
           >
             Clear
           </button>
@@ -161,22 +159,22 @@ export default function ArchivePage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           {error}
         </div>
       ) : null}
 
       {loading ? (
-        <div className="text-sm text-zinc-500">Loading archive…</div>
+        <div className="text-sm text-cream-600">Loading archive…</div>
       ) : filteredTasks.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
+        <div className="rounded-xl border border-dashed border-cream-400 p-8 text-center text-sm text-cream-600">
           No archived tasks match your filters.
         </div>
       ) : (
         <div className="space-y-8">
           {groups.map((group) => (
             <section key={group.day}>
-              <div className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500">
+              <div className="mb-3 text-xs font-medium uppercase tracking-wider text-cream-600">
                 {group.day}
               </div>
               <div className="space-y-2">
@@ -189,14 +187,14 @@ export default function ArchivePage() {
                   return (
                     <div
                       key={t.id}
-                      className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4"
+                      className="rounded-lg border border-cream-400/60 bg-white p-4 shadow-warm"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="text-base font-medium text-zinc-100">{t.title}</div>
+                          <div className="text-base font-medium text-cream-950">{t.title}</div>
 
                           {t.source_message_ts != null ? (
-                            <div className="mt-1 text-xs text-zinc-500">
+                            <div className="mt-1 text-xs text-cream-600">
                               Email: {new Date(Number(t.source_message_ts) * 1000).toLocaleString()}
                             </div>
                           ) : null}
@@ -206,7 +204,7 @@ export default function ArchivePage() {
                               {tags.map((tag) => (
                                 <span
                                   key={`${tag.category}:${tag.name}`}
-                                  className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[11px] text-zinc-400"
+                                  className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-700"
                                 >
                                   {tag.name}
                                 </span>
@@ -215,7 +213,7 @@ export default function ArchivePage() {
                           ) : null}
 
                           {t.summary ? (
-                            <div className="mt-2 line-clamp-2 text-sm text-zinc-400">
+                            <div className="mt-2 line-clamp-2 text-sm text-cream-700">
                               {t.summary}
                             </div>
                           ) : null}
@@ -223,7 +221,7 @@ export default function ArchivePage() {
                           {inboxHref ? (
                             <a
                               href={inboxHref}
-                              className="mt-2 inline-block text-xs text-zinc-400 underline underline-offset-4 hover:text-zinc-200"
+                              className="mt-2 inline-block text-xs text-wood-600 underline underline-offset-4 hover:text-wood-700"
                             >
                               View email →
                             </a>
@@ -233,7 +231,7 @@ export default function ArchivePage() {
                         <button
                           onClick={() => void restore(t.id)}
                           disabled={restoring === t.id}
-                          className="shrink-0 rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+                          className="shrink-0 rounded border border-cream-400 px-2 py-1 text-xs text-cream-800 hover:bg-cream-200 disabled:opacity-50"
                         >
                           {restoring === t.id ? 'Restoring…' : 'Restore'}
                         </button>

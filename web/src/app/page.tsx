@@ -9,7 +9,7 @@ export default function KanbanHomePage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Tracker</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Tracker</h1>
       </header>
 
       <Suspense>

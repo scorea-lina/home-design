@@ -29,7 +29,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
   const [allTags, setAllTags] = useState<TagInfo[]>([]);
   const [tagSearch, setTagSearch] = useState("");
 
-  // Fetch all available tags for the picker.
   useEffect(() => {
     fetch("/api/tags", { cache: "no-store" })
       .then((r) => r.json())
@@ -39,10 +38,8 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
       .catch(() => {});
   }, []);
 
-  // Get the root original ID.
   const originalId = image.original_image_id ?? image.id;
 
-  // All versions: original + clones, sorted chronologically.
   const thread = [
     allImages.find((i) => i.id === originalId),
     ...allImages.filter((i) => i.original_image_id === originalId),
@@ -72,7 +69,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
       const json = await res.json();
       if (json.ok && json.image) {
         await onUpdate();
-        // Switch to the new clone and open markup editor.
         setActiveImage(json.image);
         setShowMarkup(true);
       }
@@ -93,7 +89,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
   const handleMarkupSave = useCallback(
     async (markupJson: any, dataUrl: string) => {
-      // Convert dataUrl to blob and upload the annotated image to Storage.
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const storagePath = activeImage.storage_path;
@@ -107,7 +102,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
         console.error("Failed to save annotated image:", uploadErr);
       }
 
-      // Save markup annotations to the image record.
       await fetch(`/api/images/${activeImage.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -198,8 +192,8 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
   if (showMarkup && activeImage.public_url) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-cream-950/40 backdrop-blur-sm">
+        <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-cream-400/60 bg-white p-4 shadow-warm-xl">
           <MarkupEditor
             imageUrl={activeImage.public_url}
             existingMarkup={activeImage.markup_json}
@@ -213,51 +207,45 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
   return (
     <div className="fixed inset-0 z-40 flex">
-      {/* Backdrop */}
-      <div className="flex-1" onClick={onClose} />
+      <div className="flex-1 bg-cream-950/10" onClick={onClose} />
 
-      {/* Drawer */}
-      <div className="flex h-full w-full max-w-xl flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-          <h2 className="text-lg font-semibold text-zinc-100">
+      <div className="flex h-full w-full max-w-xl flex-col border-l border-cream-400/60 bg-white shadow-warm-xl">
+        <div className="flex items-center justify-between border-b border-cream-300 p-4">
+          <h2 className="text-lg font-semibold text-cream-950">
             {activeImage.title || activeImage.file_name || "Image Detail"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded px-2 py-1 text-cream-600 hover:bg-cream-200 hover:text-cream-900"
           >
             Close
           </button>
         </div>
 
-        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Main image — click to zoom */}
           {activeImage.public_url && (
             <button
               onClick={() => setShowZoom(true)}
-              className="group relative w-full overflow-hidden rounded-lg border border-zinc-800"
+              className="group relative w-full overflow-hidden rounded-lg border border-cream-400/60"
             >
               <img
                 src={activeImage.public_url}
                 alt={activeImage.title || "Image"}
                 className="w-full"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-                <span className="rounded bg-black/70 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-0 flex items-center justify-center bg-cream-950/0 transition-colors group-hover:bg-cream-950/20">
+                <span className="rounded bg-cream-950/70 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100">
                   Zoom &amp; Crop
                 </span>
               </div>
             </button>
           )}
 
-          {/* Actions */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleClone}
               disabled={cloning}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+              className="rounded-lg bg-wood-500 px-4 py-2 text-sm font-medium text-white hover:bg-wood-600 disabled:opacity-50"
             >
               {cloning ? "Cloning..." : "Clone & Edit"}
             </button>
@@ -269,25 +257,25 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                   handleClone();
                 }
               }}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
               Markup
             </button>
             <button
               onClick={handleCopy}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
               {copyStatus || "Copy"}
             </button>
             <button
               onClick={handleDownload}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
               Download
             </button>
             <button
               onClick={handleArchive}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
               Archive
             </button>
@@ -297,7 +285,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                   if (!confirm("Delete this clone? This cannot be undone.")) return;
                   await fetch(`/api/images/${activeImage.id}`, { method: "DELETE" });
                   await onUpdate();
-                  // Switch back to original or close.
                   const original = allImages.find((i) => i.id === activeImage.original_image_id);
                   if (original) {
                     setActiveImage(original);
@@ -307,20 +294,19 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                     onClose();
                   }
                 }}
-                className="rounded-lg bg-red-900/50 px-4 py-2 text-sm text-red-300 hover:bg-red-900/80"
+                className="rounded-lg border border-terra-400/40 bg-terra-400/10 px-4 py-2 text-sm text-terra-600 hover:bg-terra-400/20"
               >
                 Delete
               </button>
             )}
           </div>
 
-          {/* Tags */}
           <div>
             <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-400">Tags</span>
+              <span className="text-xs font-medium text-cream-700">Tags</span>
               <button
                 onClick={() => setShowTagPicker(!showTagPicker)}
-                className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                className="rounded bg-cream-200 px-2 py-0.5 text-xs text-cream-700 hover:bg-cream-300 hover:text-cream-900"
               >
                 + Tag
               </button>
@@ -330,7 +316,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                 {activeImage.tags.map((tag) => (
                   <span
                     key={tag.id}
-                    className="group flex items-center gap-1 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
+                    className="group flex items-center gap-1 rounded-full bg-cream-200 px-2 py-1 text-xs text-cream-800"
                   >
                     {tag.name}
                     <button
@@ -342,7 +328,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                         });
                         await onUpdate();
                       }}
-                      className="hidden text-zinc-500 hover:text-red-400 group-hover:inline"
+                      className="hidden text-cream-600 hover:text-terra-500 group-hover:inline"
                     >
                       x
                     </button>
@@ -351,12 +337,12 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
               </div>
             )}
             {showTagPicker && (
-              <div className="mt-2 rounded-lg border border-zinc-700 bg-zinc-900 p-2">
+              <div className="mt-2 rounded-lg border border-cream-400 bg-cream-50 p-2">
                 <input
                   value={tagSearch}
                   onChange={(e) => setTagSearch(e.target.value)}
                   placeholder="Search tags..."
-                  className="mb-2 w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none"
+                  className="mb-2 w-full rounded border border-cream-400 bg-white px-2 py-1 text-sm text-cream-900 placeholder-cream-600 focus:outline-none focus:border-wood-500"
                   autoFocus
                 />
                 <div className="max-h-40 overflow-y-auto space-y-0.5">
@@ -377,11 +363,11 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                           }}
                           className={`block w-full rounded px-2 py-1 text-left text-xs transition-colors ${
                             isActive
-                              ? "bg-blue-600/20 text-blue-300"
-                              : "text-zinc-300 hover:bg-zinc-800"
+                              ? "bg-wood-500/15 text-wood-700"
+                              : "text-cream-800 hover:bg-cream-200"
                           }`}
                         >
-                          <span className="text-zinc-500">{tag.category}</span> {tag.name}
+                          <span className="text-cream-600">{tag.category}</span> {tag.name}
                         </button>
                       );
                     })}
@@ -390,7 +376,6 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             )}
           </div>
 
-          {/* Title & Notes */}
           <div className="space-y-2">
             {editing ? (
               <>
@@ -398,26 +383,26 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Title"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  className="w-full rounded-lg border border-cream-400 bg-cream-50 px-3 py-2 text-sm text-cream-900 placeholder-cream-600 focus:border-wood-500 focus:outline-none"
                 />
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes..."
                   rows={3}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  className="w-full rounded-lg border border-cream-400 bg-cream-50 px-3 py-2 text-sm text-cream-900 placeholder-cream-600 focus:border-wood-500 focus:outline-none"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"
+                    className="rounded-lg bg-wood-500 px-3 py-1.5 text-sm text-white hover:bg-wood-600 disabled:opacity-50"
                   >
                     {saving ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => setEditing(false)}
-                    className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700"
+                    className="rounded-lg border border-cream-400 bg-cream-100 px-3 py-1.5 text-sm text-cream-800 hover:bg-cream-200"
                   >
                     Cancel
                   </button>
@@ -426,32 +411,30 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             ) : (
               <div
                 onClick={() => setEditing(true)}
-                className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm hover:border-zinc-600"
+                className="cursor-pointer rounded-lg border border-cream-400/60 bg-cream-50 p-3 text-sm hover:border-cream-500"
               >
-                <div className="font-medium text-zinc-200">
+                <div className="font-medium text-cream-900">
                   {activeImage.title || "Click to add title"}
                 </div>
-                <div className="mt-1 text-zinc-400">
+                <div className="mt-1 text-cream-700">
                   {activeImage.notes || "Click to add notes"}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Source email link */}
           {activeImage.source_message_id && (
             <div className="text-sm">
               <a
                 href={`/inbox/${encodeURIComponent(activeImage.source_message_id)}`}
-                className="text-blue-400 underline hover:text-blue-300"
+                className="text-wood-600 underline hover:text-wood-700"
               >
                 View source email
               </a>
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="space-y-1 text-xs text-zinc-500">
+          <div className="space-y-1 text-xs text-cream-600">
             <div>Source: {activeImage.source_type}</div>
             {activeImage.file_size_bytes && (
               <div>Size: {(activeImage.file_size_bytes / 1024 / 1024).toFixed(1)} MB</div>
@@ -459,10 +442,9 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
             <div>Uploaded: {new Date(activeImage.created_at).toLocaleString()}</div>
           </div>
 
-          {/* Timeline filmstrip */}
           {thread.length > 1 && (
             <div>
-              <div className="mb-2 text-xs font-medium text-zinc-400">
+              <div className="mb-2 text-xs font-medium text-cream-700">
                 Versions ({thread.length})
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -477,8 +459,8 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                     }}
                     className={`flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
                       img.id === activeImage.id
-                        ? "border-blue-500"
-                        : "border-zinc-700 hover:border-zinc-500"
+                        ? "border-wood-500"
+                        : "border-cream-400 hover:border-cream-500"
                     }`}
                   >
                     {img.public_url && (
@@ -488,7 +470,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
                         className="h-16 w-16 object-cover"
                       />
                     )}
-                    <div className="px-1 py-0.5 text-center text-[10px] text-zinc-400">
+                    <div className="px-1 py-0.5 text-center text-[10px] text-cream-700">
                       {i === 0 ? "Original" : `v${i}`}
                     </div>
                   </button>

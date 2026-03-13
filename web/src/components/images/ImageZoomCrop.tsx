@@ -10,12 +10,7 @@ type Props = {
 
 /**
  * Fullscreen zoom + pan viewer with crop mode.
- * - Scroll to zoom (centered on cursor)
- * - Click + drag to pan
- * - "Crop" button enters crop mode: draw a rectangle, confirm to extract
- *
- * Coordinate mapping uses the actual rendered <img> element's bounding rect
- * so the crop always matches exactly what's visible on screen.
+ * Kept dark for optimal image viewing contrast.
  */
 export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,17 +18,13 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
 
-  // Transform: offset is the pixel position of the image's top-left corner
-  // within the container.
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-  // Pan state
   const [panning, setPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
   const offsetStart = useRef({ x: 0, y: 0 });
 
-  // Crop mode
   const [cropMode, setCropMode] = useState(false);
   const [cropRect, setCropRect] = useState<{
     startX: number;
@@ -44,14 +35,12 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const [cropping, setCropping] = useState(false);
   const [extracting, setExtracting] = useState(false);
 
-  // Load image
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       imgRef.current = img;
       setImgLoaded(true);
-      // Fit image to screen initially
       const container = containerRef.current;
       if (container) {
         const padding = 80;
@@ -68,7 +57,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     img.src = imageUrl;
   }, [imageUrl]);
 
-  // Zoom centered on cursor
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
@@ -84,7 +72,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
       const newScale = Math.max(0.1, Math.min(20, scale * zoomFactor));
 
-      // Keep the point under the cursor fixed
       const ratio = newScale / scale;
       setScale(newScale);
       setOffset({
@@ -95,7 +82,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     [scale, offset, cropMode]
   );
 
-  // Convert screen coords to image coords using actual rendered img element
   const screenToImage = useCallback(
     (clientX: number, clientY: number) => {
       const imgEl = imgElRef.current;
@@ -115,7 +101,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     []
   );
 
-  // Mouse handlers for pan + crop
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
@@ -161,7 +146,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     }
   }, [cropping]);
 
-  // Get normalized crop rect (top-left to bottom-right) in image coords
   const getNormalizedCrop = useCallback(() => {
     if (!cropRect) return null;
     return {
@@ -172,7 +156,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     };
   }, [cropRect]);
 
-  // Convert crop rect from image coords to screen coords using actual img element
   const getCropScreenRect = useCallback(() => {
     const norm = getNormalizedCrop();
     if (!norm || !containerRef.current || !imgElRef.current || !imgRef.current) return null;
@@ -190,7 +173,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     };
   }, [getNormalizedCrop]);
 
-  // Extract crop at full resolution
   const handleExtractCrop = useCallback(async () => {
     const norm = getNormalizedCrop();
     if (!norm || !imgRef.current || norm.w < 10 || norm.h < 10) return;
@@ -222,7 +204,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     }
   }, [getNormalizedCrop, onCrop]);
 
-  // Reset zoom
   const handleFit = useCallback(() => {
     const container = containerRef.current;
     const img = imgRef.current;
@@ -238,7 +219,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     });
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -258,11 +238,11 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const imgW = imgRef.current ? imgRef.current.naturalWidth * scale : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-black">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-cream-950">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-cream-800 bg-cream-900 px-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-cream-500">
             {Math.round(scale * 100)}%
           </span>
           <button
@@ -280,7 +260,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
               }
               setScale(newScale);
             }}
-            className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-300 hover:bg-zinc-700"
+            className="rounded bg-cream-800 px-2 py-1 text-sm text-cream-300 hover:bg-cream-700"
           >
             Zoom In
           </button>
@@ -299,18 +279,18 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
               }
               setScale(newScale);
             }}
-            className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-300 hover:bg-zinc-700"
+            className="rounded bg-cream-800 px-2 py-1 text-sm text-cream-300 hover:bg-cream-700"
           >
             Zoom Out
           </button>
           <button
             onClick={handleFit}
-            className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-300 hover:bg-zinc-700"
+            className="rounded bg-cream-800 px-2 py-1 text-sm text-cream-300 hover:bg-cream-700"
           >
             Fit
           </button>
 
-          <div className="mx-2 h-5 w-px bg-zinc-700" />
+          <div className="mx-2 h-5 w-px bg-cream-700" />
 
           <button
             onClick={() => {
@@ -319,8 +299,8 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
             }}
             className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
               cropMode
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                ? "bg-wood-500 text-white"
+                : "bg-cream-800 text-cream-300 hover:bg-cream-700"
             }`}
           >
             Crop
@@ -330,7 +310,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
             <button
               onClick={handleExtractCrop}
               disabled={extracting}
-              className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
+              className="rounded bg-sage-500 px-3 py-1 text-sm font-medium text-white hover:bg-sage-400 disabled:opacity-50"
             >
               {extracting ? "Extracting..." : "Extract Crop"}
             </button>
@@ -339,14 +319,14 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
 
         <button
           onClick={onClose}
-          className="rounded px-3 py-1 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+          className="rounded px-3 py-1 text-sm text-cream-500 hover:bg-cream-800 hover:text-cream-300"
         >
           Close
         </button>
       </div>
 
       {/* Help text */}
-      <div className="px-4 py-1.5 text-xs text-zinc-500">
+      <div className="px-4 py-1.5 text-xs text-cream-600">
         {cropMode
           ? "Draw a rectangle on the image to select a crop area"
           : "Scroll to zoom \u00B7 Click + drag to pan"}
@@ -364,7 +344,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
         onMouseLeave={handleMouseUp}
       >
         {!imgLoaded && (
-          <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+          <div className="flex h-full items-center justify-center text-sm text-cream-600">
             Loading image...
           </div>
         )}
@@ -385,12 +365,9 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
           />
         )}
 
-        {/* Crop overlay */}
         {cropRect && cropScreen && cropScreen.width > 0 && cropScreen.height > 0 && (
           <>
-            {/* Dim everything outside the crop */}
             <div className="pointer-events-none absolute inset-0">
-              {/* Top */}
               <div
                 className="absolute bg-black/60"
                 style={{
@@ -400,7 +377,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
                   height: Math.max(0, cropScreen.top),
                 }}
               />
-              {/* Bottom */}
               <div
                 className="absolute bg-black/60"
                 style={{
@@ -410,7 +386,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
                   bottom: 0,
                 }}
               />
-              {/* Left */}
               <div
                 className="absolute bg-black/60"
                 style={{
@@ -420,7 +395,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
                   height: cropScreen.height,
                 }}
               />
-              {/* Right */}
               <div
                 className="absolute bg-black/60"
                 style={{
@@ -432,9 +406,8 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
               />
             </div>
 
-            {/* Crop border */}
             <div
-              className="pointer-events-none absolute border-2 border-blue-400"
+              className="pointer-events-none absolute border-2 border-wood-400"
               style={{
                 left: cropScreen.left,
                 top: cropScreen.top,
@@ -442,8 +415,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
                 height: cropScreen.height,
               }}
             >
-              {/* Size label */}
-              <div className="absolute -top-6 left-0 rounded bg-blue-600 px-1.5 py-0.5 text-xs text-white">
+              <div className="absolute -top-6 left-0 rounded bg-wood-500 px-1.5 py-0.5 text-xs text-white">
                 {Math.round(getNormalizedCrop()?.w ?? 0)} x{" "}
                 {Math.round(getNormalizedCrop()?.h ?? 0)}
               </div>

@@ -69,7 +69,6 @@ export default function KanbanBoard() {
       setLoading(false);
     }
 
-    // Refresh archive count in background (best-effort).
     fetch('/api/archive', { cache: 'no-store' })
       .then((r) => r.json())
       .then((j: any) => { if (typeof j.total === 'number') setArchiveCount(j.total); })
@@ -100,7 +99,6 @@ export default function KanbanBoard() {
   async function patchStatus(taskId: string, status: 'todo' | 'discussed' | 'done' | 'archived') {
     const prev = tasks;
 
-    // Optimistic UI
     if (status === 'archived') {
       setTasks((ts) => ts.filter((t) => t.id !== taskId));
     } else {
@@ -128,18 +126,14 @@ export default function KanbanBoard() {
 
   async function reorderTodo(draggedId: string, targetId: string) {
     if (draggedId === targetId) return;
-    // Compute new positions: splice dragged item before target in the current todo list.
     const todoTasks = tasks.filter((t) => String(t.status) === 'todo' || String(t.status) === 'triage' || String(t.status) === 'doing');
     const rest = todoTasks.filter((t) => t.id !== draggedId);
     const targetIdx = rest.findIndex((t) => t.id === targetId);
     const newOrder = [...rest];
     newOrder.splice(targetIdx === -1 ? rest.length : targetIdx, 0, todoTasks.find((t) => t.id === draggedId)!);
-    // Assign sequential positions starting at 1.
     const posMap: Record<string, number> = {};
     newOrder.forEach((t, i) => { posMap[t.id] = i + 1; });
-    // Optimistic update.
     setTasks((ts) => ts.map((t) => posMap[t.id] != null ? { ...t, position: posMap[t.id] } : t));
-    // Persist all changed positions.
     await Promise.all(
       Object.entries(posMap).map(([id, position]) =>
         fetch(`/api/tasks/${encodeURIComponent(id)}`, {
@@ -163,7 +157,6 @@ export default function KanbanBoard() {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      // Optimistic update in local state.
       setTasks((ts) => ts.map((tk) =>
         tk.id === taskId ? { ...tk, title: t, notes: editNotes.trim() || null } : tk
       ));
@@ -175,7 +168,6 @@ export default function KanbanBoard() {
     }
   }
 
-  // Derive unique area tags across all loaded tasks for filter pills.
   const allAreaTags = useMemo(() => {
     const seen = new Set<string>();
     for (const t of tasks) {
@@ -186,7 +178,6 @@ export default function KanbanBoard() {
     return Array.from(seen).sort();
   }, [tasks]);
 
-  // Apply tag filters client-side (show task if it has ANY of the active filters).
   const visibleTasks = useMemo(() => {
     if (activeFilters.size === 0) return tasks;
     return tasks.filter((t) =>
@@ -200,9 +191,6 @@ export default function KanbanBoard() {
       g[normalizeStatus(t.status)].push(t);
     }
 
-    // Ensure stable, immediate UI ordering:
-    // - To Do: position ASC (null last)
-    // - Done: updated_at/created_at DESC
     g.todo.sort((a, b) => {
       const at = a.source_message_ts != null
         ? Number(a.source_message_ts)
@@ -218,7 +206,7 @@ export default function KanbanBoard() {
           : (b.updated_at ?? b.created_at)
             ? +new Date(String(b.updated_at ?? b.created_at)) / 1000
             : 0;
-      if (bt !== at) return bt - at; // newest first
+      if (bt !== at) return bt - at;
       const aid = String(a.id ?? '');
       const bid = String(b.id ?? '');
       return bid.localeCompare(aid);
@@ -245,14 +233,12 @@ export default function KanbanBoard() {
     void refresh();
   }, []);
 
-  // Support ?highlight=<taskId> from search: scroll + flash the card.
   const searchParams = useSearchParams();
   const highlightParam = searchParams?.get('highlight') ?? null;
 
   useEffect(() => {
     if (!highlightParam) return;
     setHighlightId(highlightParam);
-    // Remove from URL without reload.
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('highlight');
@@ -260,7 +246,6 @@ export default function KanbanBoard() {
     }
   }, [highlightParam]);
 
-  // Scroll to highlighted card once tasks are loaded.
   useEffect(() => {
     if (!highlightId) return;
     const t = setTimeout(() => {
@@ -274,12 +259,10 @@ export default function KanbanBoard() {
 
   return (
     <div className="space-y-4">
-      {/* New Task modal */}
       {showNewTask ? (
         <NewTaskModal
           onClose={() => setShowNewTask(false)}
           onCreated={(task) => {
-            // Optimistic insert into To Do.
             setTasks((ts) => [
               { id: task.id, title: task.title, status: 'todo', notes: task.notes ?? null, tags: task.tags },
               ...ts,
@@ -307,8 +290,8 @@ export default function KanbanBoard() {
                 }
                 className={
                   active
-                    ? 'rounded-full border border-zinc-400 bg-zinc-200 px-3 py-1 text-xs font-medium text-zinc-900'
-                    : 'rounded-full border border-zinc-700 bg-zinc-950 px-3 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                    ? 'rounded-full border border-wood-500 bg-wood-500 px-3 py-1 text-xs font-medium text-white'
+                    : 'rounded-full border border-cream-400 bg-cream-100 px-3 py-1 text-xs text-cream-700 hover:border-cream-500 hover:text-cream-900'
                 }
               >
                 {tag}
@@ -318,7 +301,7 @@ export default function KanbanBoard() {
           {activeFilters.size > 0 ? (
             <button
               onClick={() => setActiveFilters(new Set())}
-              className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-500 hover:text-zinc-200"
+              className="rounded-full border border-cream-400 px-3 py-1 text-xs text-cream-600 hover:text-cream-900"
             >
               Clear filters ×
             </button>
@@ -327,32 +310,32 @@ export default function KanbanBoard() {
       ) : null}
 
       {error ? (
-        <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           Failed to load: {error}
         </div>
       ) : null}
 
       <section className="flex items-start gap-4 overflow-x-auto pb-2">
         {columns.map((col) => (
-          <div key={col.id} className="w-[400px] min-w-[400px] shrink-0 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+          <div key={col.id} className="w-[400px] min-w-[400px] shrink-0 rounded-xl border border-cream-400/60 bg-cream-100/60 p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="text-sm font-medium text-zinc-200">{col.title}</div>
+                <div className="text-sm font-medium text-cream-900">{col.title}</div>
                 {col.id === 'todo' ? (
                   <button
                     onClick={() => setShowNewTask(true)}
-                    className="rounded border border-zinc-700 px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                    className="rounded border border-cream-400 px-1.5 py-0.5 text-xs text-cream-700 hover:bg-cream-300 hover:text-cream-900"
                   >
                     +
                   </button>
                 ) : null}
               </div>
-              <div className="text-xs text-zinc-500">{grouped[col.id].length}</div>
+              <div className="text-xs text-cream-600">{grouped[col.id].length}</div>
             </div>
 
             <div className="grid gap-2">
               {grouped[col.id].length === 0 ? (
-                <div className="rounded-lg border border-dashed border-zinc-800 p-3 text-sm text-zinc-500">
+                <div className="rounded-lg border border-dashed border-cream-400 p-3 text-sm text-cream-600">
                   No tasks.
                 </div>
               ) : null}
@@ -400,15 +383,15 @@ export default function KanbanBoard() {
                         });
                       }
                     }}
-                    className={`cursor-pointer rounded-lg border p-4 hover:bg-zinc-900/60 ${
+                    className={`cursor-pointer rounded-lg border p-4 shadow-warm transition-all hover:shadow-warm-md ${
                       highlightId === t.id
-                        ? 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-400 ring-offset-1 ring-offset-black transition-all duration-700'
+                        ? 'border-wood-500 bg-white ring-2 ring-wood-400 ring-offset-1 ring-offset-cream-200 transition-all duration-700'
                         : dragOverId === t.id
-                        ? 'border-zinc-500 bg-zinc-800/60'
-                        : 'border-zinc-800 bg-zinc-900/40'
+                        ? 'border-cream-500 bg-cream-50'
+                        : 'border-cream-400/60 bg-white'
                     }`}
                   >
-                    {/* Collapsed header (always visible): title + tags + CTAs */}
+                    {/* Collapsed header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         {isExpanded && editingId === t.id ? (
@@ -416,13 +399,13 @@ export default function KanbanBoard() {
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') void saveEdit(t.id); if (e.key === 'Escape') setEditingId(null); }}
-                            className="w-full rounded border border-zinc-600 bg-zinc-800 px-1 py-0.5 text-base font-medium text-zinc-100 focus:outline-none"
+                            className="w-full rounded border border-cream-400 bg-cream-50 px-1 py-0.5 text-base font-medium text-cream-950 focus:outline-none focus:border-wood-500"
                             autoFocus
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
                           <div
-                            className={`text-base font-medium text-zinc-100 ${isExpanded ? 'cursor-text rounded px-1 py-0.5 hover:bg-zinc-800/60' : ''}`}
+                            className={`text-base font-medium text-cream-950 ${isExpanded ? 'cursor-text rounded px-1 py-0.5 hover:bg-cream-200/60' : ''}`}
                             onClick={isExpanded ? (e) => {
                               e.stopPropagation();
                               setEditTitle(t.title);
@@ -434,11 +417,11 @@ export default function KanbanBoard() {
                           </div>
                         )}
                         {t.source_message_ts != null ? (
-                          <div className="mt-1 text-xs text-zinc-500">
+                          <div className="mt-1 text-xs text-cream-600">
                             Email: {new Date(Number(t.source_message_ts) * 1000).toLocaleString()}
                           </div>
                         ) : t.source_email_date ? (
-                          <div className="mt-1 text-xs text-zinc-500">
+                          <div className="mt-1 text-xs text-cream-600">
                             Email: {new Date(String(t.source_email_date)).toLocaleString()}
                           </div>
                         ) : null}
@@ -446,7 +429,7 @@ export default function KanbanBoard() {
                           {tags.map((tag) => (
                             <span
                               key={`${tag.category}:${tag.name}`}
-                              className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[11px] text-zinc-300"
+                              className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-800"
                             >
                               {tag.name}
                             </span>
@@ -464,12 +447,11 @@ export default function KanbanBoard() {
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1">
-                        {/* Back arrow: discussed→todo, done→discussed */}
                         {current === 'discussed' ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'todo'); }}
                             title="Move to To Do"
-                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+                            className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-cream-900 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
@@ -478,18 +460,17 @@ export default function KanbanBoard() {
                           <button
                             onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'discussed'); }}
                             title="Move to Discussed"
-                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+                            className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-cream-900 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                           </button>
                         ) : null}
-                        {/* Forward: todo→discussed (speech bubble), discussed→done (checkmark) */}
                         {current === 'todo' ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'discussed'); }}
                             title="Mark as Discussed"
-                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-blue-400 disabled:opacity-50"
+                            className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-wood-600 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -499,7 +480,7 @@ export default function KanbanBoard() {
                           <button
                             onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'done'); }}
                             title="Mark as Done"
-                            className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-emerald-400 disabled:opacity-50"
+                            className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-sage-600 disabled:opacity-50"
                             disabled={loading}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -508,7 +489,7 @@ export default function KanbanBoard() {
                         <button
                           onClick={(e) => { e.stopPropagation(); void patchStatus(t.id, 'archived'); }}
                           title="Archive"
-                          className="rounded border border-zinc-700 p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+                          className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-cream-900 disabled:opacity-50"
                           disabled={loading}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
@@ -519,7 +500,6 @@ export default function KanbanBoard() {
                     {/* Expanded detail */}
                     {isExpanded ? (
                       <div className="mt-3 space-y-3" onClick={(e) => e.stopPropagation()}>
-                        {/* Notes: click to edit, or show textarea if editing */}
                         {editingId === t.id ? (
                           <div className="space-y-2">
                             <textarea
@@ -527,7 +507,7 @@ export default function KanbanBoard() {
                               onChange={(e) => setEditNotes(e.target.value)}
                               onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null); }}
                               rows={3}
-                              className="w-full rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-100 focus:outline-none"
+                              className="w-full rounded border border-cream-400 bg-cream-50 px-2 py-1 text-sm text-cream-950 focus:outline-none focus:border-wood-500"
                               placeholder="Notes (optional)"
                               autoFocus={!t.notes}
                             />
@@ -535,13 +515,13 @@ export default function KanbanBoard() {
                               <button
                                 onClick={() => void saveEdit(t.id)}
                                 disabled={editSaving || !editTitle.trim()}
-                                className="rounded border border-zinc-500 px-2 py-1 text-xs text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+                                className="rounded border border-cream-500 px-2 py-1 text-xs text-cream-900 hover:bg-cream-200 disabled:opacity-50"
                               >
                                 {editSaving ? 'Saving…' : 'Save'}
                               </button>
                               <button
                                 onClick={() => setEditingId(null)}
-                                className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800"
+                                className="rounded border border-cream-400 px-2 py-1 text-xs text-cream-700 hover:bg-cream-200"
                               >
                                 Cancel
                               </button>
@@ -550,7 +530,7 @@ export default function KanbanBoard() {
                         ) : (
                           <>
                             <div
-                              className="cursor-text rounded px-1 py-0.5 text-sm hover:bg-zinc-800/60"
+                              className="cursor-text rounded px-1 py-0.5 text-sm hover:bg-cream-200/60"
                               onClick={() => {
                                 setEditTitle(t.title);
                                 setEditNotes(t.notes ?? '');
@@ -558,19 +538,19 @@ export default function KanbanBoard() {
                               }}
                             >
                               {t.notes ? (
-                                <div className="text-zinc-300">
-                                  <div className="text-xs font-medium text-zinc-500">Notes</div>
+                                <div className="text-cream-800">
+                                  <div className="text-xs font-medium text-cream-600">Notes</div>
                                   <div className="mt-1 whitespace-pre-wrap">{t.notes}</div>
                                 </div>
                               ) : (
-                                <div className="text-xs text-zinc-500">Click to add notes…</div>
+                                <div className="text-xs text-cream-600">Click to add notes…</div>
                               )}
                             </div>
 
                             {inboxHref ? (
                               <a
                                 href={inboxHref}
-                                className="inline-block text-sm text-zinc-200 underline underline-offset-4 hover:text-white"
+                                className="inline-block text-sm text-wood-600 underline underline-offset-4 hover:text-wood-700"
                               >
                                 View email →
                               </a>
@@ -591,7 +571,7 @@ export default function KanbanBoard() {
       <div className="pt-2 text-center">
         <a
           href="/archive"
-          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-300"
+          className="text-sm text-cream-600 underline underline-offset-4 hover:text-cream-900"
         >
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
         </a>
@@ -642,7 +622,6 @@ function InlineTagEditor({
     }
 
     document.addEventListener('keydown', onKeyDown);
-    // capture=true so it still fires even if inner handlers stopPropagation
     document.addEventListener('pointerdown', onPointerDown, true);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
@@ -669,7 +648,6 @@ function InlineTagEditor({
   async function toggle(tag: { id: string; name: string; category: string }) {
     const enabled = !selectedIds.has(tag.id);
 
-    // Optimistic update local chips immediately.
     const prev = tags;
     const next: TaskTag[] = enabled
       ? [{ id: tag.id, name: tag.name, category: tag.category }, ...tags]
@@ -686,7 +664,6 @@ function InlineTagEditor({
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
     } catch {
-      // rollback
       onChange(prev);
     } finally {
       setSaving(null);
@@ -698,7 +675,7 @@ function InlineTagEditor({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((p) => !p); }}
-        className="rounded-full border border-zinc-700 px-1.5 py-0.5 text-[11px] leading-none text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+        className="rounded-full border border-cream-400 px-1.5 py-0.5 text-[11px] leading-none text-cream-700 hover:border-cream-500 hover:text-cream-900"
         title="Add tag"
       >
         +
@@ -707,18 +684,18 @@ function InlineTagEditor({
       {open ? (
         <div
           ref={popRef}
-          className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-zinc-800 bg-zinc-950 p-2 shadow-lg"
+          className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-cream-400 bg-white p-2 shadow-warm-lg"
           onClick={(e) => e.stopPropagation()}
         >
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search tags…"
-            className="mb-2 w-full rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+            className="mb-2 w-full rounded border border-cream-400 bg-cream-50 px-2 py-1 text-xs text-cream-950 placeholder:text-cream-600 focus:outline-none focus:border-wood-500"
           />
           <div className="max-h-52 overflow-auto">
             {filtered.length === 0 ? (
-              <div className="p-2 text-xs text-zinc-500">No tags found.</div>
+              <div className="p-2 text-xs text-cream-600">No tags found.</div>
             ) : (
               <div className="grid gap-1">
                 {filtered.map((tag) => {
@@ -732,8 +709,8 @@ function InlineTagEditor({
                       disabled={!!saving}
                       className={
                         sel
-                          ? 'flex items-center justify-between rounded border border-zinc-400 bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-900'
-                          : 'flex items-center justify-between rounded border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-zinc-600'
+                          ? 'flex items-center justify-between rounded border border-wood-500 bg-wood-500 px-2 py-1 text-xs font-medium text-white'
+                          : 'flex items-center justify-between rounded border border-cream-300 px-2 py-1 text-xs text-cream-800 hover:border-cream-500'
                       }
                     >
                       <span className="truncate">{tag.name}</span>

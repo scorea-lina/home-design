@@ -22,7 +22,6 @@ export default async function InboxPage() {
 
   const rows = (data ?? []) as Record<string, unknown>[];
 
-  // Sort by ts desc (epoch seconds).
   rows.sort((a, b) => {
     const an = Number(a.ts ?? 0);
     const bn = Number(b.ts ?? 0);
@@ -31,7 +30,6 @@ export default async function InboxPage() {
 
   const messageIds = rows.map((r) => String(r.message_id ?? '')).filter(Boolean);
 
-  // Batch-fetch tasks for these emails (source_message_id IN [...]).
   type TaskRow = { source_message_id: string; id: string };
   let tasksByMsgId: Record<string, TaskRow[]> = {};
 
@@ -49,7 +47,6 @@ export default async function InboxPage() {
     }
   }
 
-  // Batch-fetch tag assignments for those tasks.
   const allTaskIds = Object.values(tasksByMsgId).flat().map((t) => t.id);
   let tagsByTaskId: Record<string, string[]> = {};
 
@@ -68,7 +65,6 @@ export default async function InboxPage() {
     }
   }
 
-  // Aggregate top tags per email (unique, up to 3).
   function topTagsForEmail(messageId: string): string[] {
     const tasks = tasksByMsgId[messageId] ?? [];
     const seen = new Set<string>();
@@ -85,21 +81,21 @@ export default async function InboxPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Inbox</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Timeline of ingested emails (from <code>public.agentmail_messages</code>).
+        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Inbox</h1>
+        <p className="mt-1 text-sm text-cream-700">
+          Timeline of ingested emails (from <code className="text-cream-600">public.agentmail_messages</code>).
         </p>
       </header>
 
       {error ? (
-        <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           Failed to load: {error.message}
         </div>
       ) : null}
 
-      <div className="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
+      <div className="divide-y divide-cream-300 rounded-xl border border-cream-400/60 bg-white shadow-warm">
         {rows.length === 0 ? (
-          <div className="p-4 text-sm text-zinc-500">No emails yet.</div>
+          <div className="p-4 text-sm text-cream-600">No emails yet.</div>
         ) : (
           rows.map((row) => {
             const messageId = String(row.message_id ?? '');
@@ -115,24 +111,24 @@ export default async function InboxPage() {
               <Link
                 key={messageId}
                 href={`/inbox/${encodeURIComponent(messageId)}`}
-                className="block p-4 hover:bg-zinc-900/40"
+                className="block p-4 transition-colors hover:bg-cream-100/60"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-zinc-100">{subject}</div>
-                    <div className="mt-0.5 text-xs text-zinc-500">
+                    <div className="text-sm font-medium text-cream-950">{subject}</div>
+                    <div className="mt-0.5 text-xs text-cream-600">
                       <span>{from}</span>
                       {dateStr ? <span> · {dateStr}</span> : null}
                     </div>
                     {preview ? (
-                      <div className="mt-1.5 line-clamp-2 text-xs text-zinc-400">{preview}</div>
+                      <div className="mt-1.5 line-clamp-2 text-xs text-cream-700">{preview}</div>
                     ) : null}
                     {tags.length ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full border border-zinc-700 bg-zinc-950/60 px-2 py-0.5 text-[10px] text-zinc-400"
+                            className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[10px] text-cream-700"
                           >
                             {tag}
                           </span>
@@ -142,7 +138,7 @@ export default async function InboxPage() {
                   </div>
 
                   {tasks.length > 0 ? (
-                    <span className="shrink-0 rounded-full border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300">
+                    <span className="shrink-0 rounded-full border border-cream-400 bg-cream-100 px-2 py-0.5 text-[11px] text-cream-800">
                       {tasks.length} task{tasks.length !== 1 ? 's' : ''}
                     </span>
                   ) : null}

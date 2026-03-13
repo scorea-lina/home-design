@@ -52,7 +52,6 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
     fetchLinks();
   }, [fetchLinks]);
 
-  // Collect all unique tags for the filter bar.
   const allTags = useMemo(() => {
     const map = new Map<string, TagInfo>();
     for (const link of links) {
@@ -77,8 +76,8 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
             onClick={() => setFilterTag(null)}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
               !filterTag
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                ? "bg-wood-500 text-white"
+                : "bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900"
             }`}
           >
             All
@@ -89,8 +88,8 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
               onClick={() => setFilterTag(filterTag === tag.id ? null : tag.id)}
               className={`rounded-full px-3 py-1 text-xs transition-colors ${
                 filterTag === tag.id
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                  ? "bg-wood-500 text-white"
+                  : "bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900"
               }`}
             >
               {tag.name}
@@ -99,31 +98,27 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
         </div>
       )}
 
-      {/* Status */}
-      {loading && <div className="text-sm text-zinc-400">Loading...</div>}
+      {loading && <div className="text-sm text-cream-700">Loading...</div>}
       {error && (
-        <div className="mb-4 rounded-lg border border-red-900/60 bg-red-950/30 p-4 text-sm text-red-200">
+        <div className="mb-4 rounded-lg border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           Failed to load links: {error}
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && filteredLinks.length === 0 && !error && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-300">
+        <div className="rounded-lg border border-cream-400/60 bg-cream-100/50 p-4 text-sm text-cream-800">
           {archived ? "No archived links." : "No links yet."}
         </div>
       )}
 
-      {/* Pinterest-style masonry grid */}
       {filteredLinks.length > 0 && (
         <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
           {filteredLinks.map((link) => (
             <div
               key={link.id}
-              className="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-all hover:border-zinc-600 hover:shadow-lg"
+              className="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border border-cream-400/60 bg-white shadow-warm transition-all hover:shadow-warm-md hover:border-cream-500"
               onClick={() => setSelectedLink(link)}
             >
-              {/* OG thumbnail */}
               {link.og_image_url && (
                 <img
                   src={link.og_image_url}
@@ -137,50 +132,43 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
               )}
 
               <div className="p-4 space-y-2">
-                {/* Title / URL */}
-                <div className="text-sm font-medium text-zinc-200 line-clamp-2">
+                <div className="text-sm font-medium text-cream-950 line-clamp-2">
                   {link.title || link.hostname || link.url}
                 </div>
 
-                {/* Summary */}
                 {link.summary && (
-                  <div className="text-xs text-zinc-400 line-clamp-3">{link.summary}</div>
+                  <div className="text-xs text-cream-700 line-clamp-3">{link.summary}</div>
                 )}
 
-                {/* Description fallback if no summary */}
                 {!link.summary && link.description && (
-                  <div className="text-xs text-zinc-400 line-clamp-2">{link.description}</div>
+                  <div className="text-xs text-cream-700 line-clamp-2">{link.description}</div>
                 )}
 
-                {/* Hostname (skip if already shown as title) */}
                 {link.hostname && link.title && link.title !== link.hostname && (
-                  <div className="text-xs text-zinc-500">{link.hostname}</div>
+                  <div className="text-xs text-cream-600">{link.hostname}</div>
                 )}
 
-                {/* Tags */}
                 {link.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {link.tags.slice(0, 4).map((tag) => (
                       <span
                         key={tag.id}
-                        className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                        className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-700"
                       >
                         {tag.name}
                       </span>
                     ))}
                     {link.tags.length > 4 && (
-                      <span className="text-[10px] text-zinc-500">+{link.tags.length - 4}</span>
+                      <span className="text-[10px] text-cream-600">+{link.tags.length - 4}</span>
                     )}
                   </div>
                 )}
 
-                {/* Notes preview */}
                 {link.notes && (
-                  <div className="text-xs italic text-zinc-500 line-clamp-1">{link.notes}</div>
+                  <div className="text-xs italic text-cream-600 line-clamp-1">{link.notes}</div>
                 )}
 
-                {/* Footer: sender + date */}
-                <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                <div className="flex items-center justify-between text-[11px] text-cream-600">
                   <span>{link.sender_name || link.sender_email || ""}</span>
                   <span>{new Date(link.created_at).toLocaleDateString()}</span>
                 </div>
@@ -190,7 +178,6 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
         </div>
       )}
 
-      {/* Detail drawer */}
       {selectedLink && (
         <LinkDrawer
           link={selectedLink}

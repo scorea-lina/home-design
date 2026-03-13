@@ -16,7 +16,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="rounded px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 hover:text-white"
+      className="rounded-lg px-3 py-2 text-sm text-cream-800 transition-colors hover:bg-cream-300/60 hover:text-cream-950"
     >
       {children}
     </Link>
@@ -27,14 +27,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="min-h-screen bg-zinc-950 text-zinc-50">
+        <div className="min-h-screen bg-cream-200 text-cream-950">
           <div className="mx-auto grid max-w-7xl grid-cols-[260px_1fr] gap-6 px-4 py-6">
-            <aside className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
-              <div className="mb-4">
-                <div className="text-base font-semibold">Home Project Hub</div>
+            <aside className="rounded-2xl border border-cream-400/60 bg-cream-100/80 p-5 shadow-warm backdrop-blur-sm">
+              <div className="mb-5">
+                <div className="text-base font-semibold tracking-tight text-cream-900">Home Project Hub</div>
               </div>
 
-              <div className="grid gap-1">
+              <div className="grid gap-0.5">
                 <NavLink href="/">Tracker</NavLink>
                 <NavLink href="/links">Links</NavLink>
                 <NavLink href="/images">Images</NavLink>
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </aside>
 
-            <main className="min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 p-6">{children}</main>
+            <main className="min-w-0 rounded-2xl border border-cream-400/60 bg-white/70 p-6 shadow-warm backdrop-blur-sm">{children}</main>
           </div>
         </div>
       </body>

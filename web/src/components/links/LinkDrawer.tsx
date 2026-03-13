@@ -53,71 +53,62 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
 
   return (
     <div className="fixed inset-0 z-40 flex">
-      {/* Backdrop */}
-      <div className="flex-1" onClick={onClose} />
+      <div className="flex-1 bg-cream-950/10" onClick={onClose} />
 
-      {/* Drawer */}
-      <div className="flex h-full w-full max-w-xl flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-          <h2 className="text-lg font-semibold text-zinc-100 line-clamp-1">
+      <div className="flex h-full w-full max-w-xl flex-col border-l border-cream-400/60 bg-white shadow-warm-xl">
+        <div className="flex items-center justify-between border-b border-cream-300 p-4">
+          <h2 className="text-lg font-semibold text-cream-950 line-clamp-1">
             {link.title || link.hostname || "Link Detail"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded px-2 py-1 text-cream-600 hover:bg-cream-200 hover:text-cream-900"
           >
             Close
           </button>
         </div>
 
-        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Clickable link */}
           <a
             href={link.url}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm text-blue-400 underline hover:border-zinc-600 hover:text-blue-300 break-all"
+            className="block rounded-lg border border-cream-400/60 bg-cream-50 p-3 text-sm text-wood-600 underline hover:border-cream-500 hover:text-wood-700 break-all"
           >
             {link.url}
           </a>
 
-          {/* Summary */}
           {link.summary && (
-            <div className="text-sm text-zinc-300">{link.summary}</div>
+            <div className="text-sm text-cream-800">{link.summary}</div>
           )}
 
-          {/* Description */}
           {link.description && (
-            <div className="text-sm text-zinc-400">{link.description}</div>
+            <div className="text-sm text-cream-700">{link.description}</div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2">
             <a
               href={link.url}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              className="rounded-lg bg-wood-500 px-4 py-2 text-sm font-medium text-white hover:bg-wood-600"
             >
               Open Link
             </a>
             <button
               onClick={handleArchive}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
               {link.archived_at ? "Restore" : "Archive"}
             </button>
           </div>
 
-          {/* Tags */}
           <div>
             <div className="mb-1.5 flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-400">Tags</span>
+              <span className="text-xs font-medium text-cream-700">Tags</span>
               <button
                 onClick={() => setShowTagPicker(!showTagPicker)}
-                className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                className="rounded bg-cream-200 px-2 py-0.5 text-xs text-cream-700 hover:bg-cream-300 hover:text-cream-900"
               >
                 + Tag
               </button>
@@ -127,7 +118,7 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
                 {link.tags.map((tag) => (
                   <span
                     key={tag.id}
-                    className="group flex items-center gap-1 rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
+                    className="group flex items-center gap-1 rounded-full bg-cream-200 px-2 py-1 text-xs text-cream-800"
                   >
                     {tag.name}
                     <button
@@ -139,7 +130,7 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
                         });
                         await onUpdate();
                       }}
-                      className="hidden text-zinc-500 hover:text-red-400 group-hover:inline"
+                      className="hidden text-cream-600 hover:text-terra-500 group-hover:inline"
                     >
                       x
                     </button>
@@ -148,12 +139,12 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
               </div>
             )}
             {showTagPicker && (
-              <div className="mt-2 rounded-lg border border-zinc-700 bg-zinc-900 p-2">
+              <div className="mt-2 rounded-lg border border-cream-400 bg-cream-50 p-2">
                 <input
                   value={tagSearch}
                   onChange={(e) => setTagSearch(e.target.value)}
                   placeholder="Search tags..."
-                  className="mb-2 w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none"
+                  className="mb-2 w-full rounded border border-cream-400 bg-white px-2 py-1 text-sm text-cream-900 placeholder-cream-600 focus:outline-none focus:border-wood-500"
                   autoFocus
                 />
                 <div className="max-h-40 overflow-y-auto space-y-0.5">
@@ -174,11 +165,11 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
                           }}
                           className={`block w-full rounded px-2 py-1 text-left text-xs transition-colors ${
                             isActive
-                              ? "bg-blue-600/20 text-blue-300"
-                              : "text-zinc-300 hover:bg-zinc-800"
+                              ? "bg-wood-500/15 text-wood-700"
+                              : "text-cream-800 hover:bg-cream-200"
                           }`}
                         >
-                          <span className="text-zinc-500">{tag.category}</span> {tag.name}
+                          <span className="text-cream-600">{tag.category}</span> {tag.name}
                         </button>
                       );
                     })}
@@ -187,7 +178,6 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
             )}
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
             {editing ? (
               <>
@@ -196,20 +186,20 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add notes..."
                   rows={3}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  className="w-full rounded-lg border border-cream-400 bg-cream-50 px-3 py-2 text-sm text-cream-900 placeholder-cream-600 focus:border-wood-500 focus:outline-none"
                   autoFocus
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveNotes}
                     disabled={saving}
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:opacity-50"
+                    className="rounded-lg bg-wood-500 px-3 py-1.5 text-sm text-white hover:bg-wood-600 disabled:opacity-50"
                   >
                     {saving ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => setEditing(false)}
-                    className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700"
+                    className="rounded-lg border border-cream-400 bg-cream-100 px-3 py-1.5 text-sm text-cream-800 hover:bg-cream-200"
                   >
                     Cancel
                   </button>
@@ -218,30 +208,28 @@ export function LinkDrawer({ link, onClose, onUpdate }: Props) {
             ) : (
               <div
                 onClick={() => setEditing(true)}
-                className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-sm hover:border-zinc-600"
+                className="cursor-pointer rounded-lg border border-cream-400/60 bg-cream-50 p-3 text-sm hover:border-cream-500"
               >
-                <div className="text-xs font-medium text-zinc-400 mb-1">Notes</div>
-                <div className="text-zinc-300">
+                <div className="text-xs font-medium text-cream-700 mb-1">Notes</div>
+                <div className="text-cream-800">
                   {link.notes || "Click to add notes"}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Source email link */}
           {link.source_message_id && (
             <div className="text-sm">
               <a
                 href={`/inbox/${encodeURIComponent(link.source_message_id)}`}
-                className="text-blue-400 underline hover:text-blue-300"
+                className="text-wood-600 underline hover:text-wood-700"
               >
                 View source email
               </a>
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="space-y-1 text-xs text-zinc-500">
+          <div className="space-y-1 text-xs text-cream-600">
             {link.sender_name && <div>From: {link.sender_name}</div>}
             {link.sender_email && <div>Email: {link.sender_email}</div>}
             <div>Received: {new Date(link.created_at).toLocaleString()}</div>

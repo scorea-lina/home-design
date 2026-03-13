@@ -8,11 +8,11 @@ export default function LinksPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Links</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Links</h1>
         </div>
         <Link
           href="/links/archived"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-cream-700 hover:text-cream-900"
         >
           View Archived
         </Link>

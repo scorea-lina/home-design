@@ -13,14 +13,10 @@ function pickText(row: Record<string, unknown>, keys: string[], fallback = '') {
 export default async function InboxDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Route param is URL-encoded (often an RFC Message-ID like "<...@...>")
   const messageId = decodeURIComponent(id);
 
   const supabase = getSupabaseServerClient();
 
-  // NOTE: PostgREST will error if we reference columns that do not exist.
-  // `public.agentmail_messages` columns (per TesterBot):
-  // fetched_at, from, inbox_address, inserted_at, message_id, raw, subject, text, thread_id, to, ts
   const { data, error } = await supabase
     .from('agentmail_messages')
     .select('*')
@@ -45,46 +41,46 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold">Inbox Item</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Supabase detail (from <code>public.agentmail_messages</code>)
+        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Inbox Item</h1>
+        <p className="mt-1 text-sm text-cream-700">
+          Supabase detail (from <code className="text-cream-600">public.agentmail_messages</code>)
         </p>
       </header>
 
       {error ? (
-        <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           Failed to load from Supabase: {error.message}
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-sm font-medium text-zinc-200">Header</div>
-        <div className="mt-2 space-y-1 text-sm text-zinc-300">
+      <div className="rounded-xl border border-cream-400/60 bg-white p-4 shadow-warm">
+        <div className="text-sm font-medium text-cream-900">Header</div>
+        <div className="mt-2 space-y-1 text-sm text-cream-800">
           <div>
-            <span className="text-zinc-500">Subject:</span> {subject}
+            <span className="text-cream-600">Subject:</span> {subject}
           </div>
           <div>
-            <span className="text-zinc-500">From:</span> {from}
+            <span className="text-cream-600">From:</span> {from}
           </div>
           {to ? (
             <div>
-              <span className="text-zinc-500">To:</span> {to}
+              <span className="text-cream-600">To:</span> {to}
             </div>
           ) : null}
           {date ? (
             <div>
-              <span className="text-zinc-500">Date:</span> {date}
+              <span className="text-cream-600">Date:</span> {date}
             </div>
           ) : null}
           <div>
-            <span className="text-zinc-500">ID:</span> {id}
+            <span className="text-cream-600">ID:</span> {id}
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-        <div className="text-sm font-medium text-zinc-200">Body</div>
-        <div className="mt-2 whitespace-pre-wrap text-sm text-zinc-300">{body}</div>
+      <div className="rounded-xl border border-cream-400/60 bg-white p-4 shadow-warm">
+        <div className="text-sm font-medium text-cream-900">Body</div>
+        <div className="mt-2 whitespace-pre-wrap text-sm text-cream-800">{body}</div>
       </div>
     </div>
   );

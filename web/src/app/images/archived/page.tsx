@@ -37,16 +37,16 @@ export default function ImagesArchivedPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Images (Archived)</h1>
-        <Link href="/images" className="text-sm text-zinc-400 hover:text-zinc-200">
+        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Images (Archived)</h1>
+        <Link href="/images" className="text-sm text-cream-700 hover:text-cream-900">
           Back to Images
         </Link>
       </div>
 
-      {loading && <div className="text-sm text-zinc-400">Loading...</div>}
+      {loading && <div className="text-sm text-cream-700">Loading...</div>}
 
       {!loading && images.length === 0 && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-300">
+        <div className="rounded-lg border border-cream-400/60 bg-cream-100/50 p-4 text-sm text-cream-800">
           No archived images.
         </div>
       )}
@@ -54,18 +54,18 @@ export default function ImagesArchivedPage() {
       {images.length > 0 && (
         <div className="columns-2 gap-4 sm:columns-3 lg:columns-4">
           {images.map((img) => (
-            <div key={img.id} className="mb-4 break-inside-avoid overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50">
+            <div key={img.id} className="mb-4 break-inside-avoid overflow-hidden rounded-xl border border-cream-400/60 bg-white shadow-warm">
               {img.public_url && (
                 <img src={img.public_url} alt={img.title || img.file_name || ''} className="w-full object-cover" loading="lazy" />
               )}
               <div className="p-3">
-                <div className="text-sm text-zinc-300">{img.title || img.file_name || 'Untitled'}</div>
-                <div className="mt-1 text-xs text-zinc-500">
+                <div className="text-sm text-cream-800">{img.title || img.file_name || 'Untitled'}</div>
+                <div className="mt-1 text-xs text-cream-600">
                   Archived {img.archived_at ? new Date(img.archived_at).toLocaleDateString() : ''}
                 </div>
                 <button
                   onClick={() => handleRestore(img.id)}
-                  className="mt-2 rounded bg-zinc-800 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                  className="mt-2 rounded bg-cream-200 px-3 py-1 text-xs text-cream-800 hover:bg-cream-300"
                 >
                   Restore
                 </button>

@@ -8,12 +8,12 @@ export default function LinksArchivedPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Archived Links</h1>
-          <p className="text-sm text-zinc-400">Previously archived links.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Archived Links</h1>
+          <p className="text-sm text-cream-700">Previously archived links.</p>
         </div>
         <Link
           href="/links"
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="text-sm text-cream-700 hover:text-cream-900"
         >
           Back to Links
         </Link>

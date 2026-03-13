@@ -58,11 +58,10 @@ export function ImageGrid() {
     fetchImages();
   }, [fetchImages]);
 
-  /** Convert a single PDF page to a PNG blob using pdf.js + canvas. */
   const pdfPageToBlob = useCallback(
     async (pdfDoc: any, pageNum: number): Promise<Blob> => {
       const page = await pdfDoc.getPage(pageNum);
-      const scale = 2; // 2x for good resolution
+      const scale = 2;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
@@ -89,7 +88,6 @@ export function ImageGrid() {
 
         for (const file of fileArray) {
           if (file.type === "application/pdf") {
-            // Convert PDF pages to images using pdf.js.
             const pdfjsLib = await import("pdfjs-dist");
             pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -123,7 +121,6 @@ export function ImageGrid() {
               });
             }
           } else {
-            // Regular image upload.
             const ext = file.name.split(".").pop() || "png";
             const storagePath = `uploads/${crypto.randomUUID()}.${ext}`;
 
@@ -180,7 +177,6 @@ export function ImageGrid() {
     setDragOver(false);
   }, []);
 
-  // Only show originals (not clones) in the grid.
   const originals = images.filter((img) => !img.original_image_id);
 
   return (
@@ -192,8 +188,8 @@ export function ImageGrid() {
         onDragLeave={handleDragLeave}
         className={`mb-6 flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed p-8 text-sm transition-colors ${
           dragOver
-            ? "border-blue-500 bg-blue-500/10 text-blue-300"
-            : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
+            ? "border-wood-500 bg-wood-500/10 text-wood-600"
+            : "border-cream-400 text-cream-700 hover:border-cream-500 hover:text-cream-800"
         }`}
         onClick={() => fileInputRef.current?.click()}
       >
@@ -215,22 +211,19 @@ export function ImageGrid() {
         )}
       </div>
 
-      {/* Status */}
-      {loading && <div className="text-sm text-zinc-400">Loading...</div>}
+      {loading && <div className="text-sm text-cream-700">Loading...</div>}
       {error && (
-        <div className="mb-4 rounded-lg border border-red-900/60 bg-red-950/30 p-4 text-sm text-red-200">
+        <div className="mb-4 rounded-lg border border-terra-400/30 bg-terra-400/10 p-4 text-sm text-terra-600">
           {error}
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && originals.length === 0 && !error && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-300">
+        <div className="rounded-lg border border-cream-400/60 bg-cream-100/50 p-4 text-sm text-cream-800">
           No images yet. Upload some images or forward emails with images to get started.
         </div>
       )}
 
-      {/* Pinterest-style masonry grid */}
       {originals.length > 0 && (
         <div className="columns-2 gap-4 sm:columns-3 lg:columns-4">
           {originals.map((img) => {
@@ -241,7 +234,7 @@ export function ImageGrid() {
             return (
               <div
                 key={img.id}
-                className="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 transition-all hover:border-zinc-600 hover:shadow-lg"
+                className="mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border border-cream-400/60 bg-white shadow-warm transition-all hover:shadow-warm-md hover:border-cream-500"
                 onClick={() => setSelectedImage(img)}
               >
                 {img.public_url && (
@@ -254,12 +247,12 @@ export function ImageGrid() {
                 )}
                 <div className="p-3">
                   {img.title && (
-                    <div className="text-sm font-medium text-zinc-200 line-clamp-2">
+                    <div className="text-sm font-medium text-cream-950 line-clamp-2">
                       {img.title}
                     </div>
                   )}
                   {img.file_name && !img.title && (
-                    <div className="text-sm text-zinc-300 line-clamp-1">
+                    <div className="text-sm text-cream-800 line-clamp-1">
                       {img.file_name}
                     </div>
                   )}
@@ -268,20 +261,20 @@ export function ImageGrid() {
                       {img.tags.slice(0, 4).map((tag) => (
                         <span
                           key={tag.id}
-                          className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                          className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-700"
                         >
                           {tag.name}
                         </span>
                       ))}
                       {img.tags.length > 4 && (
-                        <span className="text-[10px] text-zinc-500">+{img.tags.length - 4}</span>
+                        <span className="text-[10px] text-cream-600">+{img.tags.length - 4}</span>
                       )}
                     </div>
                   )}
-                  <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-cream-600">
                     <span>{new Date(img.created_at).toLocaleDateString()}</span>
                     {cloneCount > 0 && (
-                      <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+                      <span className="rounded-full bg-cream-200 px-1.5 py-0.5 text-cream-700">
                         {cloneCount} clone{cloneCount !== 1 ? "s" : ""}
                       </span>
                     )}
@@ -293,7 +286,6 @@ export function ImageGrid() {
         </div>
       )}
 
-      {/* Detail drawer */}
       {selectedImage && (
         <ImageDrawer
           image={selectedImage}
