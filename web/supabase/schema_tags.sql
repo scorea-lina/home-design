@@ -100,7 +100,6 @@ values
   ('Finance','topic'),
   ('Allowances','topic'),
   ('Timeline','topic'),
-  ('Decisions','topic'),
   ('Open Questions','topic'),
   ('Procurement','topic')
 on conflict (name, category) do nothing;
