@@ -261,7 +261,7 @@ export function ImageGrid() {
                       {img.tags.slice(0, 4).map((tag) => (
                         <span
                           key={tag.id}
-                          className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-700"
+                          className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-900"
                         >
                           {tag.name}
                         </span>

@@ -77,7 +77,7 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
               !filterTag
                 ? "bg-wood-500 text-white"
-                : "bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900"
+                : "bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950"
             }`}
           >
             All
@@ -89,7 +89,7 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
               className={`rounded-full px-3 py-1 text-xs transition-colors ${
                 filterTag === tag.id
                   ? "bg-wood-500 text-white"
-                  : "bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900"
+                  : "bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950"
               }`}
             >
               {tag.name}
@@ -153,7 +153,7 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
                     {link.tags.slice(0, 4).map((tag) => (
                       <span
                         key={tag.id}
-                        className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-700"
+                        className="rounded-full bg-cream-200 px-1.5 py-0.5 text-[10px] text-cream-900"
                       >
                         {tag.name}
                       </span>

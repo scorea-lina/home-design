@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { EB_Garamond } from 'next/font/google';
 
 import './globals.css';
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+const ebGaramond = EB_Garamond({
+  variable: '--font-eb-garamond',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+});
 
 export const metadata: Metadata = {
   title: 'Home Project Hub',
@@ -16,7 +19,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="rounded-lg px-3 py-2 text-sm text-cream-800 transition-colors hover:bg-cream-300/60 hover:text-cream-950"
+      className="rounded-lg px-3 py-2 text-[15px] font-semibold text-cream-800 transition-colors hover:bg-cream-300/60 hover:text-cream-950"
     >
       {children}
     </Link>
@@ -26,9 +29,9 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${ebGaramond.variable} antialiased`}>
         <div className="min-h-screen bg-cream-200 text-cream-950">
-          <div className="mx-auto grid max-w-7xl grid-cols-[260px_1fr] gap-6 px-4 py-6">
+          <div className="mx-auto grid max-w-7xl grid-cols-[200px_1fr] gap-6 px-4 py-6">
             <aside className="rounded-2xl border border-cream-400/60 bg-cream-100/80 p-5 shadow-warm backdrop-blur-sm">
               <div className="mb-5">
                 <div className="text-base font-semibold tracking-tight text-cream-900">Home Project Hub</div>

@@ -291,7 +291,7 @@ export default function KanbanBoard() {
                 className={`rounded-full px-3 py-1 text-xs transition-colors ${
                   active
                     ? 'bg-wood-500 text-white'
-                    : 'bg-cream-200 text-cream-700 hover:bg-cream-300 hover:text-cream-900'
+                    : 'bg-cream-200 text-cream-900 hover:bg-cream-300 hover:text-cream-950'
                 }`}
               >
                 {tag}
@@ -429,7 +429,7 @@ export default function KanbanBoard() {
                           {tags.map((tag) => (
                             <span
                               key={`${tag.category}:${tag.name}`}
-                              className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-800"
+                              className="rounded-full border border-cream-400 bg-cream-200 px-2 py-0.5 text-[11px] text-cream-950"
                             >
                               {tag.name}
                             </span>

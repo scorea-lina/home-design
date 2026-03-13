@@ -13,3 +13,4 @@ web/.turbo/
 # local data (keep layout, not contents)
 data/*.db
 data/**/*.db
+.vercel
