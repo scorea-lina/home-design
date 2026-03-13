@@ -17,6 +17,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const imgElRef = useRef<HTMLImageElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [fitted, setFitted] = useState(false);
 
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -205,6 +206,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
       y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
     });
+    setFitted(true);
   }, []);
 
   // Center image once loaded AND container has real dimensions
@@ -363,7 +365,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
           </div>
         )}
 
-        {imgLoaded && imgRef.current && (
+        {imgLoaded && imgRef.current && fitted && (
           <img
             ref={imgElRef}
             src={imageUrl}
