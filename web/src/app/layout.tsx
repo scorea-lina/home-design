@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </aside>
 
-            <main className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6">{children}</main>
+            <main className="min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 p-6">{children}</main>
           </div>
         </div>
       </body>
