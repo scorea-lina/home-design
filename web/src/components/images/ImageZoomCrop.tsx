@@ -10,7 +10,8 @@ type Props = {
 
 /**
  * Fullscreen zoom + pan viewer with crop mode.
- * Kept dark for optimal image viewing contrast.
+ * Uses CSS transform for positioning — image is always CSS-centered by default.
+ * offset {0,0} = image centered in viewport. Pan/zoom are deltas from center.
  */
 export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,8 +19,10 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [ready, setReady] = useState(false);
 
+  // scale: 1 = fit-to-viewport. offset {0,0} = centered (no pan).
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const fitScaleRef = useRef(1);
 
   const [panning, setPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
@@ -35,7 +38,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const [cropping, setCropping] = useState(false);
   const [extracting, setExtracting] = useState(false);
 
-  // Load image and compute fit in one shot
+  // Load image and compute initial fit scale
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -46,12 +49,9 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
         const padding = 80;
         const scaleX = (container.clientWidth - padding) / img.naturalWidth;
         const scaleY = (container.clientHeight - padding) / img.naturalHeight;
-        const fitScale = Math.min(scaleX, scaleY, 1);
-        setScale(fitScale);
-        setOffset({
-          x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
-          y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
-        });
+        const fit = Math.min(scaleX, scaleY, 1);
+        fitScaleRef.current = fit;
+        setScale(fit);
       }
       setReady(true);
     };
@@ -63,17 +63,17 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       e.preventDefault();
       if (cropMode) return;
 
-      const container = containerRef.current;
-      if (!container) return;
-
       // Pinch-to-zoom on trackpad or Ctrl/Cmd + scroll → zoom
       if (e.ctrlKey || e.metaKey) {
+        const container = containerRef.current;
+        if (!container) return;
+
         const rect = container.getBoundingClientRect();
-        const cursorX = e.clientX - rect.left;
-        const cursorY = e.clientY - rect.top;
+        const cursorX = e.clientX - rect.left - rect.width / 2;
+        const cursorY = e.clientY - rect.top - rect.height / 2;
 
         const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-        const newScale = Math.max(0.1, Math.min(20, scale * zoomFactor));
+        const newScale = Math.max(0.05, Math.min(20, scale * zoomFactor));
 
         const ratio = newScale / scale;
         setScale(newScale);
@@ -221,12 +221,10 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
     const padding = 80;
     const scaleX = (container.clientWidth - padding) / img.naturalWidth;
     const scaleY = (container.clientHeight - padding) / img.naturalHeight;
-    const fitScale = Math.min(scaleX, scaleY, 1);
-    setScale(fitScale);
-    setOffset({
-      x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
-      y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
-    });
+    const fit = Math.min(scaleX, scaleY, 1);
+    fitScaleRef.current = fit;
+    setScale(fit);
+    setOffset({ x: 0, y: 0 });
   }, []);
 
   useEffect(() => {
@@ -253,21 +251,11 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       <div className="flex items-center justify-between border-b border-cream-800 bg-cream-900 px-4 py-2">
         <div className="flex items-center gap-3">
           <span className="text-sm text-cream-500">
-            {Math.round(scale * 100)}%
+            {Math.round((scale / fitScaleRef.current) * 100)}%
           </span>
           <button
             onClick={() => {
               const newScale = Math.min(20, scale * 1.5);
-              const container = containerRef.current;
-              if (container) {
-                const cx = container.clientWidth / 2;
-                const cy = container.clientHeight / 2;
-                const ratio = newScale / scale;
-                setOffset({
-                  x: cx - ratio * (cx - offset.x),
-                  y: cy - ratio * (cy - offset.y),
-                });
-              }
               setScale(newScale);
             }}
             className="rounded bg-cream-800 px-2 py-1 text-sm text-cream-300 hover:bg-cream-700"
@@ -276,17 +264,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
           </button>
           <button
             onClick={() => {
-              const newScale = Math.max(0.1, scale / 1.5);
-              const container = containerRef.current;
-              if (container) {
-                const cx = container.clientWidth / 2;
-                const cy = container.clientHeight / 2;
-                const ratio = newScale / scale;
-                setOffset({
-                  x: cx - ratio * (cx - offset.x),
-                  y: cy - ratio * (cy - offset.y),
-                });
-              }
+              const newScale = Math.max(0.05, scale / 1.5);
               setScale(newScale);
             }}
             className="rounded bg-cream-800 px-2 py-1 text-sm text-cream-300 hover:bg-cream-700"
@@ -342,10 +320,10 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
           : "Scroll to pan \u00B7 Pinch or \u2318+scroll to zoom \u00B7 Click + drag to pan"}
       </div>
 
-      {/* Image viewport */}
+      {/* Image viewport — flexbox centers the image by default */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-hidden"
+        className="relative flex-1 overflow-hidden flex items-center justify-center"
         style={{ cursor: cropMode ? "crosshair" : panning ? "grabbing" : "grab" }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -354,7 +332,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
         onMouseLeave={handleMouseUp}
       >
         {!ready && (
-          <div className="flex h-full items-center justify-center text-sm text-cream-600">
+          <div className="text-sm text-cream-600">
             Loading image...
           </div>
         )}
@@ -365,11 +343,10 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
             src={imageUrl}
             alt="Zoom view"
             draggable={false}
-            className="absolute select-none"
+            className="select-none max-w-none"
             style={{
-              left: offset.x,
-              top: offset.y,
               width: imgW,
+              transform: `translate(${offset.x}px, ${offset.y}px)`,
               imageRendering: scale > 3 ? "pixelated" : "auto",
             }}
           />
