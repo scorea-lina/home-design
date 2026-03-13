@@ -33,8 +33,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { data: urlData } = supabase.storage
       .from(BUCKET)
       .getPublicUrl(data.storage_path);
+    const bust = data.updated_at ? `?t=${new Date(data.updated_at).getTime()}` : '';
 
-    return NextResponse.json({ ok: true, image: { ...data, public_url: urlData?.publicUrl ?? null } });
+    return NextResponse.json({ ok: true, image: { ...data, public_url: urlData?.publicUrl ? urlData.publicUrl + bust : null } });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }

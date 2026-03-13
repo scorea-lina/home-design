@@ -62,8 +62,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: urlData } = supabase.storage
       .from(BUCKET)
       .getPublicUrl(clone.storage_path);
+    const bust = clone.updated_at ? `?t=${new Date(clone.updated_at).getTime()}` : '';
 
-    return NextResponse.json({ ok: true, image: { ...clone, public_url: urlData?.publicUrl ?? null } });
+    return NextResponse.json({ ok: true, image: { ...clone, public_url: urlData?.publicUrl ? urlData.publicUrl + bust : null } });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }

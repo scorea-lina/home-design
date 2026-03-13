@@ -109,7 +109,8 @@ export async function GET(req: NextRequest) {
       const { data: urlData } = supabase.storage
         .from(BUCKET)
         .getPublicUrl(img.storage_path);
-      return { ...img, public_url: urlData?.publicUrl ?? null, tags: tagMap[img.id] ?? [] };
+      const bust = img.updated_at ? `?t=${new Date(img.updated_at).getTime()}` : '';
+      return { ...img, public_url: urlData?.publicUrl ? urlData.publicUrl + bust : null, tags: tagMap[img.id] ?? [] };
     });
 
     return NextResponse.json({ ok: true, images });
@@ -166,8 +167,9 @@ export async function POST(req: NextRequest) {
     const { data: urlData } = supabase.storage
       .from(BUCKET)
       .getPublicUrl(data.storage_path);
+    const bust = data.updated_at ? `?t=${new Date(data.updated_at).getTime()}` : '';
 
-    return NextResponse.json({ ok: true, image: { ...data, public_url: urlData?.publicUrl ?? null } });
+    return NextResponse.json({ ok: true, image: { ...data, public_url: urlData?.publicUrl ? urlData.publicUrl + bust : null } });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
