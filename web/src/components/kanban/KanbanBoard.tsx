@@ -389,11 +389,21 @@ export default function KanbanBoard() {
                       const from = dragIdRef.current;
                       if (from && from !== t.id && col.id === 'todo') void reorderTodo(from, t.id);
                     }}
-                    onClick={() => setExpanded((p) => ({ ...p, [t.id]: !p[t.id] }))}
+                    onClick={() => {
+                      setExpanded((p) => {
+                        const next = !p[t.id];
+                        if (!next && editingId === t.id) setEditingId(null);
+                        return { ...p, [t.id]: next };
+                      });
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setExpanded((p) => ({ ...p, [t.id]: !p[t.id] }));
+                        setExpanded((p) => {
+                          const next = !p[t.id];
+                          if (!next && editingId === t.id) setEditingId(null);
+                          return { ...p, [t.id]: next };
+                        });
                       }
                     }}
                     className={`cursor-pointer rounded-lg border p-4 hover:bg-zinc-900/60 ${
