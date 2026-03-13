@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
@@ -38,10 +39,22 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
   }
   const body = pickText(row, ['text', 'body_text', 'raw_text', 'body', 'raw', 'snippet'], '(no body)');
 
+  // Fetch tasks linked to this email
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, title, status, notes')
+    .eq('source_message_id', messageId);
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Inbox Item</h1>
+      <header className="flex items-center gap-3">
+        <Link
+          href="/inbox"
+          className="rounded-lg border border-cream-400 px-2.5 py-1.5 text-sm text-cream-700 transition-colors hover:bg-cream-200 hover:text-cream-900"
+        >
+          <span aria-hidden="true">&larr;</span> Inbox
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight text-cream-950">{subject}</h1>
       </header>
 
       {error ? (
@@ -51,11 +64,7 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
       ) : null}
 
       <div className="rounded-xl border border-cream-400/60 bg-white p-4 shadow-warm">
-        <div className="text-sm font-medium text-cream-900">Header</div>
-        <div className="mt-2 space-y-1 text-sm text-cream-800">
-          <div>
-            <span className="text-cream-600">Subject:</span> {subject}
-          </div>
+        <div className="space-y-1 text-sm text-cream-800">
           <div>
             <span className="text-cream-600">From:</span> {from}
           </div>
@@ -69,16 +78,36 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
               <span className="text-cream-600">Date:</span> {date}
             </div>
           ) : null}
-          <div>
-            <span className="text-cream-600">ID:</span> {id}
-          </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-cream-400/60 bg-white p-4 shadow-warm">
-        <div className="text-sm font-medium text-cream-900">Body</div>
-        <div className="mt-2 whitespace-pre-wrap text-sm text-cream-800">{body}</div>
+        <div className="whitespace-pre-wrap text-sm text-cream-800">{body}</div>
       </div>
+
+      {tasks && tasks.length > 0 ? (
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-cream-900">
+            {tasks.length} task{tasks.length !== 1 ? 's' : ''} from this email
+          </div>
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <Link
+                key={task.id}
+                href={`/?highlight=${task.id}`}
+                className="block rounded-xl border border-cream-400/60 bg-white p-3 shadow-warm transition-colors hover:border-wood-400 hover:bg-cream-50"
+              >
+                <div className="text-sm font-medium text-cream-950">{task.title}</div>
+                <div className="mt-1">
+                  {task.notes ? (
+                    <span className="text-xs text-cream-600 line-clamp-1">{task.notes}</span>
+                  ) : null}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

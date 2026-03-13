@@ -118,9 +118,6 @@ export default function ArchivePage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Archive</h1>
-          <p className="mt-1 text-sm text-cream-700">
-            Tasks you've archived — out of the way, but not gone.
-          </p>
         </div>
         <a
           href="/"

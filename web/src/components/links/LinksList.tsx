@@ -168,8 +168,7 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
                   <div className="text-xs italic text-cream-600 line-clamp-1">{link.notes}</div>
                 )}
 
-                <div className="flex items-center justify-between text-[11px] text-cream-600">
-                  <span>{link.sender_name || link.sender_email || ""}</span>
+                <div className="text-right text-[11px] text-cream-600">
                   <span>{new Date(link.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
