@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = {
   imageUrl: string;
@@ -245,7 +246,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const cropScreen = getCropScreenRect();
   const imgW = imgRef.current ? imgRef.current.naturalWidth * scale : 0;
 
-  return (
+  const viewer = (
     <div className="fixed inset-0 z-[100] flex flex-col bg-cream-950">
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-cream-800 bg-cream-900 px-4 py-2">
@@ -412,4 +413,6 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       </div>
     </div>
   );
+
+  return createPortal(viewer, document.body);
 }
