@@ -416,15 +416,6 @@ export default function KanbanBoard() {
                             {t.title}
                           </div>
                         )}
-                        {t.source_message_ts != null ? (
-                          <div className="mt-1 text-xs text-cream-600">
-                            Email: {new Date(Number(t.source_message_ts) * 1000).toLocaleString()}
-                          </div>
-                        ) : t.source_email_date ? (
-                          <div className="mt-1 text-xs text-cream-600">
-                            Email: {new Date(String(t.source_email_date)).toLocaleString()}
-                          </div>
-                        ) : null}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           {tags.map((tag) => (
                             <span
@@ -473,7 +464,7 @@ export default function KanbanBoard() {
                             className="rounded border border-cream-400 p-1.5 text-cream-600 hover:bg-cream-200 hover:text-wood-600 disabled:opacity-50"
                             disabled={loading}
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                           </button>
                         ) : null}
                         {current !== 'done' ? (
@@ -559,6 +550,21 @@ export default function KanbanBoard() {
                         )}
                       </div>
                     ) : null}
+
+                    {(() => {
+                      const d = t.source_email_date
+                        ? new Date(String(t.source_email_date))
+                        : t.source_message_ts != null
+                          ? new Date(Number(t.source_message_ts) * 1000)
+                          : t.created_at
+                            ? new Date(String(t.created_at))
+                            : null;
+                      return d ? (
+                        <div className="mt-2 text-right text-[11px] text-cream-500">
+                          {d.toLocaleDateString()}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 );
               })}

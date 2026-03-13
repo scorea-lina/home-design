@@ -82,9 +82,6 @@ export default async function InboxPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Inbox</h1>
-        <p className="mt-1 text-sm text-cream-700">
-          Timeline of ingested emails (from <code className="text-cream-600">public.agentmail_messages</code>).
-        </p>
       </header>
 
       {error ? (

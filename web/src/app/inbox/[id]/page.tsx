@@ -42,9 +42,6 @@ export default async function InboxDetailPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-cream-950">Inbox Item</h1>
-        <p className="mt-1 text-sm text-cream-700">
-          Supabase detail (from <code className="text-cream-600">public.agentmail_messages</code>)
-        </p>
       </header>
 
       {error ? (
