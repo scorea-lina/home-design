@@ -16,8 +16,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgElRef = useRef<HTMLImageElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [fitted, setFitted] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -36,12 +35,25 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
   const [cropping, setCropping] = useState(false);
   const [extracting, setExtracting] = useState(false);
 
+  // Load image and compute fit in one shot
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       imgRef.current = img;
-      setImgLoaded(true);
+      const container = containerRef.current;
+      if (container) {
+        const padding = 80;
+        const scaleX = (container.clientWidth - padding) / img.naturalWidth;
+        const scaleY = (container.clientHeight - padding) / img.naturalHeight;
+        const fitScale = Math.min(scaleX, scaleY, 1);
+        setScale(fitScale);
+        setOffset({
+          x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
+          y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
+        });
+      }
+      setReady(true);
     };
     img.src = imageUrl;
   }, [imageUrl]);
@@ -206,34 +218,7 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
       x: (container.clientWidth - img.naturalWidth * fitScale) / 2,
       y: (container.clientHeight - img.naturalHeight * fitScale) / 2,
     });
-    setFitted(true);
   }, []);
-
-  // Center image once loaded AND container has real dimensions
-  useEffect(() => {
-    if (!imgLoaded || !imgRef.current) return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    // If container already has dimensions, fit immediately
-    if (container.clientHeight > 0) {
-      handleFit();
-      return;
-    }
-
-    // Otherwise wait for container to get its layout
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.height > 0) {
-          handleFit();
-          ro.disconnect();
-          return;
-        }
-      }
-    });
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [imgLoaded, handleFit]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -359,13 +344,13 @@ export function ImageZoomCrop({ imageUrl, onCrop, onClose }: Props) {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {!imgLoaded && (
+        {!ready && (
           <div className="flex h-full items-center justify-center text-sm text-cream-600">
             Loading image...
           </div>
         )}
 
-        {imgLoaded && imgRef.current && fitted && (
+        {ready && imgRef.current && (
           <img
             ref={imgElRef}
             src={imageUrl}
