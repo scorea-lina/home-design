@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Tool = "freehand" | "line" | "arrow" | "rectangle" | "text";
+type Tool = "freehand" | "line" | "arrow" | "rectangle" | "circle" | "text" | "move";
 type Color = string;
 
 type Annotation = {
@@ -23,11 +23,19 @@ type Props = {
 };
 
 const COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#ffffff", "#000000"];
+/** Font sizes as fraction of image shorter dimension — scale-independent. */
+const FONT_SIZE_SCALES: { frac: number; label: string }[] = [
+  { frac: 0.025, label: "S" },
+  { frac: 0.045, label: "M" },
+  { frac: 0.07, label: "L" },
+];
 const TOOLS: { id: Tool; label: string }[] = [
+  { id: "move", label: "Move" },
   { id: "freehand", label: "Draw" },
   { id: "line", label: "Line" },
   { id: "arrow", label: "Arrow" },
   { id: "rectangle", label: "Rect" },
+  { id: "circle", label: "Circle" },
   { id: "text", label: "Text" },
 ];
 
@@ -37,10 +45,23 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [tool, setTool] = useState<Tool>("freehand");
   const [color, setColor] = useState(COLORS[0]);
+  const [fontSizeIdx, setFontSizeIdx] = useState(1); // 0=S, 1=M, 2=L
   const [annotations, setAnnotations] = useState<Annotation[]>(existingMarkup ?? []);
+
+  /** Compute actual pixel font size from image dimensions and current scale index. */
+  const getFontSize = useCallback(() => {
+    const img = imgRef.current;
+    if (!img) return 32;
+    const shorter = Math.min(img.naturalWidth, img.naturalHeight);
+    return Math.round(shorter * FONT_SIZE_SCALES[fontSizeIdx].frac);
+  }, [fontSizeIdx]);
   const [drawing, setDrawing] = useState(false);
   const [currentAnnotation, setCurrentAnnotation] = useState<Annotation | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+
+  // Move tool state
+  const [movingIdx, setMovingIdx] = useState<number | null>(null);
+  const [moveStart, setMoveStart] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -98,12 +119,23 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const pos = getPos(e);
 
+      // Move tool: find annotation under cursor
+      if (tool === "move") {
+        const canvasSize = imgRef.current ? Math.min(imgRef.current.naturalWidth, imgRef.current.naturalHeight) : undefined;
+        const idx = hitTest(annotations, pos, canvasSize);
+        if (idx >= 0) {
+          setMovingIdx(idx);
+          setMoveStart(pos);
+        }
+        return;
+      }
+
       if (tool === "text") {
         const text = prompt("Enter text:");
         if (text) {
           setAnnotations((prev) => [
             ...prev,
-            { tool: "text", color, start: pos, text, fontSize: 24 },
+            { tool: "text", color, start: pos, text, fontSize: getFontSize() },
           ]);
         }
         return;
@@ -117,13 +149,25 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
         setCurrentAnnotation({ tool, color, start: pos, end: pos });
       }
     },
-    [tool, color, getPos]
+    [tool, color, getPos, annotations, getFontSize]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!drawing || !currentAnnotation) return;
       const pos = getPos(e);
+
+      // Move tool: drag selected annotation
+      if (tool === "move" && movingIdx !== null && moveStart) {
+        const dx = pos.x - moveStart.x;
+        const dy = pos.y - moveStart.y;
+        setAnnotations((prev) =>
+          prev.map((ann, i) => (i === movingIdx ? offsetAnnotation(ann, dx, dy) : ann))
+        );
+        setMoveStart(pos);
+        return;
+      }
+
+      if (!drawing || !currentAnnotation) return;
 
       if (currentAnnotation.tool === "freehand") {
         setCurrentAnnotation((prev) => ({
@@ -146,10 +190,17 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
           : { ...currentAnnotation, end: pos };
       drawAnnotation(ctx, preview);
     },
-    [drawing, currentAnnotation, getPos]
+    [drawing, currentAnnotation, getPos, tool, movingIdx, moveStart]
   );
 
   const handleMouseUp = useCallback(() => {
+    // Move tool: release
+    if (movingIdx !== null) {
+      setMovingIdx(null);
+      setMoveStart(null);
+      return;
+    }
+
     if (!drawing || !currentAnnotation) return;
     setDrawing(false);
 
@@ -161,7 +212,7 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
       const ctx = overlay.getContext("2d");
       ctx?.clearRect(0, 0, overlay.width, overlay.height);
     }
-  }, [drawing, currentAnnotation]);
+  }, [drawing, currentAnnotation, movingIdx]);
 
   const handleUndo = useCallback(() => {
     setAnnotations((prev) => prev.slice(0, -1));
@@ -207,6 +258,24 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
           ))}
         </div>
 
+        {tool === "text" && (
+          <div className="flex items-center gap-1">
+            {FONT_SIZE_SCALES.map((fs, idx) => (
+              <button
+                key={fs.label}
+                onClick={() => setFontSizeIdx(idx)}
+                className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
+                  fontSizeIdx === idx
+                    ? "bg-wood-500 text-white"
+                    : "bg-cream-200 text-cream-800 hover:bg-cream-300"
+                }`}
+              >
+                {fs.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="ml-auto flex items-center gap-1.5">
           <button
             onClick={handleUndo}
@@ -248,7 +317,7 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
         />
         <canvas
           ref={overlayRef}
-          className="absolute left-0 top-0 w-full cursor-crosshair rounded-lg"
+          className={`absolute left-0 top-0 w-full rounded-lg ${tool === "move" ? "cursor-grab" : "cursor-crosshair"}`}
           style={{ display: imgLoaded ? "block" : "none" }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -264,7 +333,9 @@ export function MarkupEditor({ imageUrl, existingMarkup, onSave, onCancel }: Pro
 function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
   ctx.strokeStyle = ann.color;
   ctx.fillStyle = ann.color;
-  ctx.lineWidth = 3;
+  // Scale line width to ~0.3% of canvas shorter dimension so strokes are visible on high-res images
+  const shorter = Math.min(ctx.canvas.width, ctx.canvas.height);
+  ctx.lineWidth = Math.max(2, Math.round(shorter * 0.003));
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
@@ -299,7 +370,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
       ctx.stroke();
 
       const angle = Math.atan2(end.y - start.y, end.x - start.x);
-      const headLen = 15;
+      const headLen = Math.max(10, Math.round(shorter * 0.015));
       ctx.beginPath();
       ctx.moveTo(end.x, end.y);
       ctx.lineTo(
@@ -325,6 +396,18 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
       break;
     }
 
+    case "circle": {
+      if (!ann.start || !ann.end) return;
+      const cx = (ann.start.x + ann.end.x) / 2;
+      const cy = (ann.start.y + ann.end.y) / 2;
+      const rx = Math.abs(ann.end.x - ann.start.x) / 2;
+      const ry = Math.abs(ann.end.y - ann.start.y) / 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+
     case "text": {
       if (!ann.start || !ann.text) return;
       ctx.font = `${ann.fontSize || 24}px sans-serif`;
@@ -332,4 +415,75 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: Annotation) {
       break;
     }
   }
+}
+
+/** Offset an annotation's position by (dx, dy). */
+function offsetAnnotation(ann: Annotation, dx: number, dy: number): Annotation {
+  const moved = { ...ann };
+  if (moved.start) moved.start = { x: moved.start.x + dx, y: moved.start.y + dy };
+  if (moved.end) moved.end = { x: moved.end.x + dx, y: moved.end.y + dy };
+  if (moved.points) moved.points = moved.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+  return moved;
+}
+
+/** Find the top-most annotation under a point (returns index, or -1). */
+function hitTest(annotations: Annotation[], pos: { x: number; y: number }, canvasSize?: number): number {
+  const HIT = canvasSize ? Math.max(12, Math.round(canvasSize * 0.01)) : 12;
+  // Walk backwards so top-most (last drawn) is found first
+  for (let i = annotations.length - 1; i >= 0; i--) {
+    const ann = annotations[i];
+    switch (ann.tool) {
+      case "rectangle":
+      case "circle": {
+        if (!ann.start || !ann.end) break;
+        const x1 = Math.min(ann.start.x, ann.end.x) - HIT;
+        const y1 = Math.min(ann.start.y, ann.end.y) - HIT;
+        const x2 = Math.max(ann.start.x, ann.end.x) + HIT;
+        const y2 = Math.max(ann.start.y, ann.end.y) + HIT;
+        if (pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2) return i;
+        break;
+      }
+      case "line":
+      case "arrow": {
+        if (!ann.start || !ann.end) break;
+        if (distToSegment(pos, ann.start, ann.end) < HIT) return i;
+        break;
+      }
+      case "text": {
+        if (!ann.start) break;
+        const fs = ann.fontSize || 24;
+        const textW = (ann.text?.length ?? 0) * fs * 0.6;
+        if (
+          pos.x >= ann.start.x - HIT &&
+          pos.x <= ann.start.x + textW + HIT &&
+          pos.y >= ann.start.y - fs - HIT &&
+          pos.y <= ann.start.y + HIT
+        ) return i;
+        break;
+      }
+      case "freehand": {
+        const pts = ann.points || [];
+        for (let j = 1; j < pts.length; j++) {
+          if (distToSegment(pos, pts[j - 1], pts[j]) < HIT) return i;
+        }
+        break;
+      }
+    }
+  }
+  return -1;
+}
+
+/** Distance from point p to line segment a-b. */
+function distToSegment(
+  p: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number }
+): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LinkDrawer } from "./LinkDrawer";
+import NewLinkModal from "./NewLinkModal";
 
 export type TagInfo = {
   id: string;
@@ -32,6 +33,7 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [selectedLink, setSelectedLink] = useState<LinkRow | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [showNewLink, setShowNewLink] = useState(false);
 
   const fetchLinks = useCallback(async () => {
     try {
@@ -69,6 +71,26 @@ export function LinksList({ archived = false }: { archived?: boolean }) {
 
   return (
     <>
+      {showNewLink && (
+        <NewLinkModal
+          onClose={() => setShowNewLink(false)}
+          onCreated={() => {
+            setShowNewLink(false);
+            fetchLinks();
+          }}
+        />
+      )}
+
+      {/* Add link + tag filter bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        <button
+          onClick={() => setShowNewLink(true)}
+          className="rounded-full border border-dashed border-wood-400 px-3 py-1 text-xs text-wood-700 hover:bg-wood-50"
+        >
+          + Add Link
+        </button>
+      </div>
+
       {/* Tag filter bar */}
       {allTags.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1.5">

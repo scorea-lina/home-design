@@ -97,6 +97,8 @@ export async function GET(req: NextRequest) {
     }
 
     const filteredRows = rows.filter((l: any) => {
+      // Allow manually-added links (no source_message_id)
+      if (!l.source_message_id) return true;
       if (!allowedMessageIds.has(l.source_message_id)) return false;
       try {
         const host = new URL(String(l.url ?? "")).hostname;
@@ -225,6 +227,92 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, links });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const supabase = getSupabaseServerClient();
+    const body = (await req.json().catch(() => ({}))) as {
+      url?: string;
+      title?: string;
+      notes?: string;
+      tags?: string[];
+    };
+
+    const rawUrl = (body.url ?? "").trim();
+    if (!rawUrl) {
+      return NextResponse.json({ ok: false, error: "URL is required" }, { status: 400 });
+    }
+
+    // Validate URL
+    let parsed: URL;
+    try {
+      parsed = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
+    } catch {
+      return NextResponse.json({ ok: false, error: "Invalid URL" }, { status: 400 });
+    }
+
+    const url = parsed.toString();
+    const title = (body.title ?? "").trim() || null;
+    const notes = (body.notes ?? "").trim() || null;
+
+    // Try to fetch OG image
+    let og_image_url: string | null = null;
+    let fetchedTitle: string | null = null;
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; HomeProjectHub/1.0)" },
+        signal: AbortSignal.timeout(5000),
+      });
+      const html = await res.text();
+      const ogMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
+        ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i);
+      if (ogMatch?.[1]) og_image_url = ogMatch[1];
+
+      if (!title) {
+        const titleMatch = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)
+          ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:title"/i)
+          ?? html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (titleMatch?.[1]) fetchedTitle = titleMatch[1].trim();
+      }
+    } catch {
+      // OG fetch is best-effort
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("links")
+      .insert({
+        source_message_id: null,
+        url,
+        title: title || fetchedTitle,
+        notes,
+        og_image_url,
+      })
+      .select("id")
+      .single();
+
+    if (error || !inserted) {
+      return NextResponse.json({ ok: false, error: error?.message ?? "Insert failed" }, { status: 500 });
+    }
+
+    // Insert tag assignments if provided
+    const tagIds = (body.tags ?? []).filter(Boolean);
+    if (tagIds.length) {
+      const tagRows = tagIds.map((tag_id: string) => ({
+        tag_id,
+        target_type: "link",
+        target_id: inserted.id,
+        confidence: "manual",
+      }));
+      await supabase.from("tag_assignments").upsert(tagRows, {
+        onConflict: "tag_id,target_type,target_id",
+      });
+    }
+
+    return NextResponse.json({ ok: true, id: inserted.id });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }

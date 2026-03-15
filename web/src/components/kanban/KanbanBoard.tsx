@@ -646,13 +646,20 @@ export default function KanbanBoard() {
         ))}
       </section>
 
-      {/* Archive entry point */}
-      <div className="pt-2 text-center">
+      {/* Footer actions */}
+      <div className="flex items-center justify-center gap-4 pt-2">
         <a
           href="/archive"
           className="text-sm text-cream-600 underline underline-offset-4 hover:text-cream-900"
         >
           View Archive{archiveCount !== null ? ` (${archiveCount})` : ''}
+        </a>
+        <span className="text-cream-400">·</span>
+        <a
+          href="/brief"
+          className="text-sm text-cream-600 underline underline-offset-4 hover:text-cream-900"
+        >
+          Generate Brief
         </a>
       </div>
 
