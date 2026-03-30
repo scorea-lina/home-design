@@ -41,10 +41,12 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
 
   const originalId = image.original_image_id ?? image.id;
 
-  const thread = [
+  const thread = ([
     allImages.find((i) => i.id === originalId),
     ...allImages.filter((i) => i.original_image_id === originalId),
-  ].filter(Boolean) as ImageRow[];
+  ].filter(Boolean) as ImageRow[]).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -286,7 +288,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
               disabled={cloning}
               className="rounded-lg bg-wood-500 px-4 py-2 text-sm font-medium text-white hover:bg-wood-600 disabled:opacity-50"
             >
-              {cloning ? "Cloning..." : "Clone & Edit"}
+              {cloning ? "Cloning..." : "Clone"}
             </button>
             <button
               onClick={() => {
@@ -298,7 +300,7 @@ export function ImageDrawer({ image, allImages, onClose, onUpdate }: Props) {
               }}
               className="rounded-lg border border-cream-400 bg-cream-100 px-4 py-2 text-sm text-cream-800 hover:bg-cream-200"
             >
-              Markup
+              Edit
             </button>
             <button
               onClick={handleCopy}
